@@ -10,3 +10,11 @@ dependencies = [
     "pyzbar>=0.1.9",
     "pygame>=2.5",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
