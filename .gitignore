@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+
+# Generated output
+emulator/qr_output/*.png
+emulator/qr_output/*.pdf
+/tmp/scouterhud_*.png
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

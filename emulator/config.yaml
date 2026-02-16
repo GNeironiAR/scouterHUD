@@ -1,0 +1,67 @@
+broker:
+  host: "0.0.0.0"
+  port: 1883
+
+devices:
+  - id: "monitor-bed-12"
+    name: "Monitor Respiratorio Cama 12"
+    type: "medical.respiratory_monitor"
+    topic: "ward3/bed12/vitals"
+    auth: "pin"
+    pin: "1234"
+    refresh_ms: 1000
+    scenario: "stable_patient"
+    params:
+      spo2_base: 97
+      heart_rate_base: 72
+      resp_rate_base: 16
+      temp_c_base: 36.8
+
+  - id: "car-001"
+    name: "Mi Auto - Ford Focus 2018"
+    type: "vehicle.obd2"
+    topic: "vehicles/car001/obd2"
+    auth: "open"
+    refresh_ms: 500
+    scenario: "city_driving"
+    params:
+      rpm_base: 2000
+      speed_base: 40
+      coolant_temp_base: 88
+      fuel_pct_start: 65
+
+  - id: "srv-prod-01"
+    name: "Prod Server us-east-1"
+    type: "infra.aws_instance"
+    topic: "infra/prod/server01"
+    auth: "token"
+    token: "tok_demo_abc123"
+    refresh_ms: 5000
+    scenario: "normal_load"
+    params:
+      instance_type: "t3.large"
+      monthly_cost_base: 234.56
+
+  - id: "thermo-kitchen"
+    name: "Termostato Cocina"
+    type: "home.thermostat"
+    topic: "home/kitchen/climate"
+    auth: "open"
+    refresh_ms: 3000
+    scenario: "daily_cycle"
+    params:
+      temp_c_base: 22.0
+      humidity_base: 45
+
+  - id: "press-machine-07"
+    name: "Prensa Hidraulica #7"
+    type: "industrial.pressure_gauge"
+    topic: "factory/zone2/press07"
+    auth: "pin"
+    pin: "5678"
+    refresh_ms: 1000
+    scenario: "production_cycle"
+    params:
+      pressure_bar_base: 150
+      temp_c_base: 45
+      cycle_time_sec: 12

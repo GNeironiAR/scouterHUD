@@ -1,0 +1,12 @@
+[project]
+name = "scouterhud"
+version = "0.1.0"
+description = "ScouterHUD — Open Source AI-Powered Monocular HUD"
+requires-python = ">=3.10"
+dependencies = [
+    "paho-mqtt>=2.0",
+    "pyyaml>=6.0",
+    "Pillow>=10.0",
+    "pyzbar>=0.1.9",
+    "pygame>=2.5",
+]
