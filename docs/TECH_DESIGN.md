@@ -1,13 +1,13 @@
 # ScouterHUD — Open Source AI-Powered Monocular HUD
 
-## Technical Design Document v0.2
+## Technical Design Document v0.3
 
 **Project Codename:** ScouterHUD  
 **Author:** Ger  
 **Date:** February 2026  
 **License:** MIT (Software) / CERN-OHL-S v2 (Hardware)  
 **Status:** Pre-prototype / Planning  
-**Revision:** v0.2 — Added QR-Link protocol, see-through optics, camera module
+**Revision:** v0.3 — Camera optional (privacy), ScouterApp as primary input, biometric auth
 
 ---
 
@@ -15,9 +15,11 @@
 
 ### 1.1 Qué es ScouterHUD
 
-Un heads-up display monocular wearable de bajo costo, open source, basado en Raspberry Pi, con integración de IA y descubrimiento contextual de dispositivos via QR. Inspirado en el scouter de Dragon Ball Z: una vincha que sostiene una pantalla semitransparente frente a un ojo, con procesamiento, audio y batería distribuidos alrededor de la cabeza.
+Un heads-up display monocular wearable de bajo costo, open source, basado en Raspberry Pi, con integración de IA y descubrimiento contextual de dispositivos via QR. Inspirado en el scouter de Dragon Ball Z: una vincha que sostiene una pantalla semitransparente frente a un ojo, con procesamiento, audio y batería distribuidos alrededor de la cabeza. **Sin cámara** — la privacidad es prioridad.
 
-**Innovación clave: QR-Link Protocol.** El usuario mira un código QR pegado en cualquier dispositivo (auto, monitor médico, sensor IoT, servidor) y el ScouterHUD se conecta automáticamente para mostrar datos en vivo superpuestos en su campo visual. No es AR convencional — es mejor: es un sistema de descubrimiento contextual visual que funciona con hardware de $60.
+**Innovación clave: QR-Link Protocol.** El usuario escanea un código QR con la ScouterApp (cámara del celular), se autentica con biometría (FaceID/huella), y el ScouterHUD muestra datos en vivo superpuestos en su campo visual. No es AR convencional — es mejor: es un sistema de descubrimiento contextual visual que funciona con hardware de ~$50.
+
+**Decisión de privacidad:** El HUD no incluye cámara. Un wearable con cámara genera rechazo social ("Glassholes"), problemas legales (HIPAA, GDPR), y prohibiciones de acceso. El escaneo QR se hace desde el celular — intencional y controlado. Ver [camera-tech-doc.md](camera-tech-doc.md) para el módulo de cámara opcional.
 
 ### 1.2 Qué NO es
 
@@ -29,7 +31,7 @@ Un heads-up display monocular wearable de bajo costo, open source, basado en Ras
 ### 1.3 Propuesta de valor
 
 - **100% open source** (hardware + software + protocolo + docs)
-- **Costo total < $65 USD** para el MVP
+- **Costo total < $50 USD** para el MVP (sin cámara)
 - **AI-first**: diseñado para ser una interfaz wearable hacia LLMs y agentes de IA
 - **QR-Link**: protocolo abierto de descubrimiento visual de dispositivos
 - **See-through**: display semitransparente que no bloquea la visión
@@ -39,11 +41,11 @@ Un heads-up display monocular wearable de bajo costo, open source, basado en Ras
 ### 1.4 Casos de uso
 
 **QR-Link (feature estrella):**
-- Mirar el QR de un monitor de respiración médica → ver SpO2, frecuencia, alertas en pantalla
-- Mirar el QR del auto → ver datos OBD-II (RPM, temperatura, códigos de error)
-- Mirar el QR de un rack de servidores → ver métricas de CloudWatch, costos, alertas
-- Mirar el QR de una máquina industrial → ver estado, temperatura, ciclos
-- Mirar el QR de un electrodoméstico → ver temperatura, estado, consumo
+- Escanear el QR de un monitor médico con la app → autenticarse con huella → ver SpO2, frecuencia, alertas en el HUD
+- Escanear el QR del auto → ver datos OBD-II (RPM, temperatura, códigos de error)
+- Escanear el QR de un rack de servidores → ver métricas de CloudWatch, costos, alertas
+- Escanear el QR de una máquina industrial → ver estado, temperatura, ciclos
+- Escanear el QR de un electrodoméstico → ver temperatura, estado, consumo
 
 **Asistente IA:**
 - Asistente de voz manos libres (STT → LLM → TTS + display)
@@ -72,11 +74,12 @@ Un heads-up display monocular wearable de bajo costo, open source, basado en Ras
 │  └────────────┘    │  ┌─────┐  │     (oído derecho)          │
 │   (ojo derecho)    │  │WiFi │  │                              │
 │                    │  │ BT  │  │    ┌──────────────────────┐  │
-│  ┌────────────┐    │  └─────┘  │    │  MICROPHONE          │  │
-│  │ PI CAMERA  │───►│           │    │  (MEMS / USB)        │  │
-│  │ (QR scan)  │CSI │  GPIO     │    └──────────────────────┘  │
-│  └────────────┘    └─────┬─────┘     (cerca de boca)         │
-│   (junto al display)     │                                    │
+│                    │  └─────┘  │    │  MICROPHONE          │  │
+│                    │           │    │  (MEMS / USB)        │  │
+│                    │  GPIO     │    └──────────────────────┘  │
+│                    └─────┬─────┘     (cerca de boca)         │
+│                          │                                    │
+│  (SIN CÁMARA — QR scan via ScouterApp, ver camera-tech-doc)  │
 │                    ┌─────▼─────┐                              │
 │                    │ BATTERY   │                              │
 │                    │ + BMS     │                              │
@@ -93,7 +96,7 @@ Un heads-up display monocular wearable de bajo costo, open source, basado en Ras
                / beam splitter\
               /   + cámara     \
       ┌──────┐    + display     ┌──────┐
-      │ pad  │                  │ RPi  │
+      │ pad  │   (sin cámara)  │ RPi  │
       │ foam │                  │ Zero │
       │(left)│                  │ +mic │
       │      │                  │+audio│
@@ -120,14 +123,17 @@ Un heads-up display monocular wearable de bajo costo, open source, basado en Ras
                          │/   │ reflejo
                          /    │
                         /     │
-                    [DISPLAY TFT]     [PI CAMERA]
-                    (cara arriba)     (mira al frente)
-                    ilumina hacia     captura QR codes
-                    el splitter       del mundo real
+                    [DISPLAY TFT]
+                    (cara arriba)
+                    ilumina hacia
+                    el splitter
 
     Resultado: El ojo ve simultáneamente:
     - El mundo real (luz que atraviesa el splitter)
     - Los datos del display (luz reflejada por el splitter)
+
+    Nota: SIN CÁMARA en el HUD. QR scanning via ScouterApp (celular).
+    Ver camera-tech-doc.md para módulo de cámara opcional.
 ```
 
 **Principio óptico:** El beam splitter es simplemente un pedazo de acrílico transparente (o vidrio) posicionado a 45° entre el ojo y el mundo. El display se coloca perpendicular (cara arriba o lateral), su luz rebota en el acrílico hacia el ojo. La luz del mundo real pasa a través del acrílico con ~50-70% de transmisión.
@@ -156,16 +162,25 @@ Un heads-up display monocular wearable de bajo costo, open source, basado en Ras
 
 ### 3.1 Concepto
 
-QR-Link es un protocolo abierto que permite a cualquier dispositivo (IoT, vehículo, equipo médico, servidor, electrodoméstico) anunciar su identidad y endpoint de datos a través de un simple código QR impreso. Cuando el ScouterHUD escanea el QR, se conecta al dispositivo y muestra datos en vivo.
+QR-Link es un protocolo abierto que permite a cualquier dispositivo (IoT, vehículo, equipo médico, servidor, electrodoméstico) anunciar su identidad y endpoint de datos a través de un simple código QR impreso. El usuario escanea el QR con la ScouterApp (cámara del celular), se autentica con biometría, y el HUD muestra datos en vivo.
 
 ```
-┌──────────┐   óptico    ┌──────────┐   WiFi/BLE   ┌──────────────┐
-│ScouterHUD│──(cámara)──►│ QR Code  │──(contiene)─►│  Dispositivo  │
-│          │             │          │              │  (auto,       │
-│ muestra  │◄────────────│ ID +     │◄─────────────│  monitor,     │
-│ datos    │  datos via  │ protocol │  transmite   │  sensor,      │
-│ en vivo  │  WiFi/BLE   │ endpoint │  datos live  │  servidor)    │
-└──────────┘              └──────────┘              └──────────────┘
+┌──────────┐  BLE/WiFi   ┌──────────┐               ┌──────────────┐
+│ScouterApp│──(URL)─────►│ScouterHUD│──WiFi/MQTT───►│  Dispositivo  │
+│ (celular)│             │ (display)│               │  (auto,       │
+│ escanea  │  biometría  │ muestra  │◄──────────────│  monitor,     │
+│ QR + auth│────────────►│ datos    │  datos live   │  sensor,      │
+└──────────┘              └──────────┘               └──────────────┘
+     │
+     │ cámara del
+     │ celular
+     ▼
+┌──────────┐
+│ QR Code  │
+│ (pegado  │
+│  en el   │
+│  device) │
+└──────────┘
 ```
 
 ### 3.2 Formato del QR Code
@@ -236,12 +251,14 @@ Toda la metadata adicional (nombre legible, tipo, ícono, refresh rate, schema, 
 **Flujo completo:**
 
 ```
-1. ScouterHUD escanea QR → parsea URL compacta (id, proto, endpoint, auth)
-2. Se conecta al endpoint según proto
-3. Solicita metadata ($meta topic/endpoint)
-4. Recibe JSON completo con name, type, icon, schema, layout, etc.
-5. Con el type, selecciona el layout apropiado
-6. Se subscribe al stream de datos y renderiza
+1. ScouterApp escanea QR con cámara del celular → parsea URL compacta
+2. App envía URL al HUD por BLE/WiFi
+3. Si requiere auth → app pide biometría (FaceID/huella) → envía credenciales
+4. HUD se conecta al endpoint según proto
+5. Solicita metadata ($meta topic/endpoint)
+6. Recibe JSON completo con name, type, icon, schema, layout, etc.
+7. Con el type, selecciona el layout apropiado
+8. Se subscribe al stream de datos y renderiza
 ```
 
 **Ventajas de este diseño:**
@@ -342,34 +359,38 @@ custom.*                 → Layout genérico key-value
 ### 3.6 Flujo de conexión completo
 
 ```
-1. SCAN
-   Cámara captura frame → pyzbar detecta QR → parsea JSON
-   Tiempo estimado: 100-500ms
+1. SCAN (via ScouterApp)
+   App abre cámara del celular → detecta QR → parsea URL
+   App envía URL al HUD por BLE/WiFi
 
-2. VALIDATE
-   Verifica versión del protocolo
+2. AUTH (si requerido)
+   App solicita biometría (FaceID/huella)
+   App envía credenciales al HUD por canal encriptado
+
+3. VALIDATE
+   HUD verifica versión del protocolo
    Verifica que el proto esté soportado
    Chequea si el dispositivo ya fue conectado antes (cache)
 
-3. CONNECT
+4. CONNECT
    Establece conexión al endpoint según proto:
    - MQTT: subscribe al topic
    - HTTP: GET inicial + polling o SSE stream
    - WS: connect + listen
    - BLE: scan + connect + subscribe characteristic
 
-4. RENDER
+5. RENDER
    Busca layout para el device type
    Si no hay layout específico → usa layout genérico key-value
    Renderiza datos en el beam splitter display
    Actualiza según refresh_ms
 
-5. MAINTAIN
+6. MAINTAIN
    Reconexión automática si se pierde conexión
    Timeout configurable (default 30s sin datos → desconecta)
    Cache del último estado conocido
 
-6. DISCONNECT
+7. DISCONNECT
    Trigger: escaneo de nuevo QR, comando de voz "cerrar",
    o timeout sin datos
    Limpia conexión y vuelve a pantalla home
@@ -388,13 +409,14 @@ El QR es visible para cualquiera que pase cerca del dispositivo. Si el QR contie
 - Uso: datos no sensibles (temperatura ambiente, estado de máquina pública, señalética interactiva).
 - `"auth": "open"` en el QR.
 
-**Nivel 1 — Device PIN (MVP)**
+**Nivel 1 — Biometric (MVP con ScouterApp)**
 - El QR contiene el endpoint pero NO da acceso.
 - Al conectarse, el dispositivo responde con un challenge `AUTH_REQUIRED`.
-- El usuario ingresa un PIN de 4-6 dígitos (por voz: "pin uno dos tres cuatro", o pre-configurado en el ScouterHUD).
-- El dispositivo valida el PIN y abre el stream de datos.
-- El PIN se cachea localmente para reconexiones futuras (con TTL configurable).
-- `"auth": "pin"` en el QR.
+- La ScouterApp solicita biometría (FaceID/huella) y envía las credenciales almacenadas en Keychain/Keystore.
+- La primera vez, el usuario ingresa el PIN manualmente; las siguientes veces, la biometría desbloquea las credenciales.
+- `"auth": "pin"` en el QR (el método de ingreso es transparente — biometría o manual).
+
+> **Nota:** Sin la ScouterApp, el PIN se ingresa manualmente con el teclado del HUD (w/s para cambiar dígito, a/d para mover cursor). Con la app, la biometría lo reemplaza.
 
 ```
 ScouterHUD                          Dispositivo
@@ -516,18 +538,19 @@ Los campos adicionales de auth (`auth_hint`, `auth_endpoint`, `roles_available`)
 | 3 | Display ALT | 0.96" OLED SSD1306 128x64 I2C | $3-4 | Monocromático, más simple, menor consumo |
 | 4 | Beam Splitter | Acrílico transparente 1mm, ~30x25mm | $1-3 | Cortado a 45°. Alt: caja de CD |
 | 5 | Lente | Lupa asférica 3-5X ~30mm diámetro | $2-3 | Colima luz del display hacia el splitter |
-| 6 | Cámara | Pi Camera Module OV5647 (compatible) | $4-5 | 5MP, conector CSI, para escaneo QR |
-| 7 | Batería | 18650 Li-ion 3000mAh (ej: Samsung 30Q) | $5-8 | ~5-8 hrs autonomía estimada |
-| 8 | BMS + Boost | TP4056 + MT3608 módulo | $3-5 | Carga USB-C, boost a 5V estable |
-| 9 | BMS ALT | Waveshare Li-ion Battery HAT | $10 | Plug & play, incluye protección |
-| 10 | Audio | Auricular intracanal con cable corto | $2-3 | Via USB sound card |
-| 11 | Micrófono | USB sound card mini + mic electret | $3-4 | Audio in + out en un módulo |
-| 12 | MicroSD | 16-32GB Clase 10 | $5-8 | Para el OS + software |
-| 13 | Cables | FFC cable para cámara, jumpers, termocontr. | $3-4 | FFC de 15cm para Pi Camera |
-| 14 | Frame | Filamento PETG para impresión 3D | $2-3 | ~60g de material por unidad |
-| 15 | Varios | Tornillos M2/M2.5, espuma EVA, velcro | $2-3 | Montaje y confort |
+| 6 | Batería | 18650 Li-ion 3000mAh (ej: Samsung 30Q) | $5-8 | ~5-8 hrs autonomía estimada |
+| 7 | BMS + Boost | TP4056 + MT3608 módulo | $3-5 | Carga USB-C, boost a 5V estable |
+| 8 | BMS ALT | Waveshare Li-ion Battery HAT | $10 | Plug & play, incluye protección |
+| 9 | Audio | Auricular intracanal con cable corto | $2-3 | Via USB sound card |
+| 10 | Micrófono | USB sound card mini + mic electret | $3-4 | Audio in + out en un módulo |
+| 11 | MicroSD | 16-32GB Clase 10 | $5-8 | Para el OS + software |
+| 12 | Cables | Jumpers, termocontraíble | $2-3 | Conexiones internas |
+| 13 | Frame | Filamento PETG para impresión 3D | $2-3 | ~60g de material por unidad |
+| 14 | Varios | Tornillos M2/M2.5, espuma EVA, velcro | $2-3 | Montaje y confort |
 
-**Costo total estimado MVP:** $50-68 USD
+**Costo total estimado MVP (sin cámara):** $40-55 USD
+
+> **Nota:** El HUD base no incluye cámara — el escaneo QR se hace desde la ScouterApp (celular). Ver [camera-tech-doc.md](camera-tech-doc.md) para el módulo de cámara opcional (+$12-17).
 
 ### 4.2 Herramientas necesarias
 
@@ -584,8 +607,9 @@ El brillo alto es crítico para see-through: la imagen reflejada compite con la 
     │                  │ mundo real                       │
     │           [APERTURA FRONTAL]                        │
     │                                                     │
-    │  [PI CAMERA]  (montada mirando al frente,          │
-    │               junto a la apertura)                  │
+    │  (SIN CÁMARA — QR scan via ScouterApp)               │
+    │  (Slot disponible para módulo opcional,              │
+    │   ver camera-tech-doc.md)                            │
     │                                                     │
     └─────────────────────────────────────────────────────┘
 ```
@@ -597,22 +621,11 @@ El brillo alto es crítico para see-through: la imagen reflejada compite con la 
 4. La lente entre display y splitter colima la imagen
 5. El ojo recibe: reflejo de datos + luz del mundo real
 
-### 5.2 Cámara (QR Scanner)
+### 5.2 Cámara (opcional — ver camera-tech-doc.md)
 
-**Módulo:** Pi Camera OV5647 (v1.3 compatible) o módulo CSI genérico.
+**El HUD base no incluye cámara.** El escaneo QR se hace desde la ScouterApp (cámara del celular). Esta decisión es deliberada por privacidad: un wearable con cámara genera rechazo social ("Glassholes"), problemas legales (HIPAA, GDPR), y prohibiciones de acceso en hospitales, juzgados y datacenters. Sin cámara, el HUD es un dispositivo puro de display que puede entrar a cualquier espacio.
 
-**Conexión:** Cable FFC (flat flex cable) de 15cm al conector CSI del Pi Zero 2W. El Pi Zero usa conector CSI mini, puede necesitar adaptador FFC de 22pin a 15pin.
-
-**Montaje:** La cámara se monta en el housing del display, mirando al frente, cerca de la apertura del beam splitter. Así "ve" lo mismo que el ojo del usuario.
-
-**Configuración de software para QR scanning:**
-
-Resolución de captura para QR: 640x480 es suficiente (menor = más rápido).
-La cámara NO necesita estar capturando constantemente. Modo de operación:
-1. **Idle:** Sin captura (ahorro de energía)
-2. **Scan mode:** Activado por comando de voz ("escanear") o botón
-3. **Burst scan:** Captura frames a 5-10 FPS hasta detectar QR
-4. **QR found:** Para captura, procesa, conecta al dispositivo
+**Módulo opcional:** Pi Camera OV5647 (v1.3 compatible) o módulo CSI genérico (+$12-17). Incluye LED indicador hardwired obligatorio (no bypasseable por software). Ver [camera-tech-doc.md](camera-tech-doc.md) para detalles completos de hardware, modos de operación, y análisis de privacidad.
 
 ### 5.3 Alimentación
 
@@ -623,26 +636,26 @@ La cámara NO necesita estar capturando constantemente. Modo de operación:
                     ↑                                       │
               [USB-C input]                            [3.3V rail]
                (carga)                                      │
-                                                  [Display + Mic + Camera]
+                                                  [Display + Mic]
 ```
 
-**Consumo estimado:**
+**Consumo estimado (sin cámara):**
 
 | Componente | Consumo típico | Consumo pico |
 |-----------|---------------|-------------|
 | RPi Zero 2W (idle + WiFi) | 120 mA | 350 mA |
 | Display TFT SPI | 20 mA | 30 mA |
-| Pi Camera (durante scan) | 50 mA | 100 mA |
 | Micrófono (USB) | 5 mA | 10 mA |
 | Audio (auricular) | 5 mA | 15 mA |
 | BMS overhead | 10 mA | 20 mA |
-| **TOTAL (sin cámara)** | **~160 mA** | **~425 mA** |
-| **TOTAL (con cámara activa)** | **~210 mA** | **~525 mA** |
+| **TOTAL** | **~160 mA** | **~425 mA** |
+
+> Con módulo de cámara opcional: +50-100 mA durante escaneo.
 
 **Autonomía con 18650 3000mAh:**
-- Uso normal (cámara intermitente): **~8-12 horas**
-- Uso intensivo (WiFi + AI + cámara): **~5-7 horas**
-- Estimación conservadora real: **5-8 horas**
+- Uso normal (sin cámara): **~10-15 horas**
+- Uso intensivo (WiFi + AI): **~5-8 horas**
+- Estimación conservadora real: **5-10 horas**
 
 ### 5.4 Audio — Entrada y salida
 
@@ -671,7 +684,7 @@ hardware/3d-models/
 ├── optics_housing.stl        → Housing principal: display + lente + splitter
 ├── optics_splitter_mount.stl → Soporte del beam splitter a 45°
 ├── optics_lens_ring.stl      → Anillo ajustable para la lente
-├── camera_mount.stl          → Soporte de Pi Camera en el housing
+├── camera_mount.stl          → (opcional) Soporte de Pi Camera
 ├── rpi_enclosure.stl         → Enclosure del Pi Zero (sobre oreja)
 ├── battery_case.stl          → Caja 18650 + BMS (nuca)
 ├── mic_boom.stl              → Mini boom para micrófono
@@ -688,14 +701,15 @@ hardware/3d-models/
 - Color recomendado: negro mate (reduce reflejos internos en óptica)
 - Peso total estimado del frame: 50-70g
 
-**Peso total del dispositivo ensamblado:**
+**Peso total del dispositivo ensamblado (sin cámara):**
 - Frame: ~60g
 - Pi Zero 2W: 10g
 - Display + óptica: 15g
-- Cámara: 3g
 - 18650 + BMS: 50g
 - Audio + mic + cables: 15g
-- **Total: ~153g** (comparable a unos auriculares over-ear)
+- **Total: ~120g** (comparable a unos auriculares over-ear, menos que la mayoría de smart glasses)
+
+> Con módulo de cámara opcional: +3g (~123g total).
 
 ---
 
@@ -724,10 +738,10 @@ hardware/3d-models/
 │  └──────────┘ └────────────┘ └─────────┘ └────────┘  │
 ├───────────────────────────────────────────────────────┤
 │                 CAPA DE DRIVERS                        │
-│  ┌───────┐ ┌──────┐ ┌─────┐ ┌──────┐ ┌────┐ ┌─────┐ │
-│  │SPI    │ │PiCam │ │ BT  │ │WiFi  │ │ALSA│ │MQTT │ │
-│  │Display│ │(QR)  │ │     │ │      │ │    │ │/WS  │ │
-│  └───────┘ └──────┘ └─────┘ └──────┘ └────┘ └─────┘ │
+│  ┌───────┐ ┌─────┐ ┌──────┐ ┌────┐ ┌─────┐ ┌─────┐ │
+│  │SPI    │ │ BT  │ │WiFi  │ │ALSA│ │MQTT │ │PiCam│ │
+│  │Display│ │     │ │      │ │    │ │/WS  │ │(opt)│ │
+│  └───────┘ └─────┘ └──────┘ └────┘ └─────┘ └─────┘ │
 ├───────────────────────────────────────────────────────┤
 │            Raspberry Pi OS Lite (Bookworm 64-bit)     │
 │            Python 3.11+ / asyncio / systemd           │
@@ -751,6 +765,10 @@ scouterhud/
 │   ├── OPTICS_GUIDE.md           → Guía de ensamble óptico
 │   ├── QR_LINK_GUIDE.md          → Cómo crear QR para tus dispositivos
 │   ├── TROUBLESHOOTING.md        → Problemas comunes
+│   ├── camera-tech-doc.md       → Módulo de cámara opcional (análisis de privacidad)
+│   ├── app-tech-doc.md          → ScouterApp design
+│   ├── gauntlet-tech-doc.md     → ScouterGauntlet design
+│   ├── bridge-tech-doc.md       → ScouterBridge design
 │   └── images/
 │
 ├── hardware/
@@ -778,12 +796,12 @@ scouterhud/
 │   │   │   ├── layouts.py        → Device-type specific layouts
 │   │   │   └── fonts/            → Bitmap fonts optimized for small display
 │   │   │
-│   │   ├── camera/
+│   │   ├── camera/              → (opcional — solo con módulo de cámara)
 │   │   │   ├── __init__.py
 │   │   │   ├── backend.py        → ABC CameraBackend interface
 │   │   │   ├── backend_picamera.py → Pi Camera capture (picamera2)
 │   │   │   ├── backend_desktop.py → Webcam/file loader (OpenCV)
-│   │   │   └── qr_decoder.py     → QR detection + parsing (pyzbar, backend-agnostic)
+│   │   │   └── qr_decoder.py     → QR detection + parsing (pyzbar)
 │   │   │
 │   │   ├── qrlink/
 │   │   │   ├── __init__.py
@@ -881,8 +899,14 @@ scouterhud/
 │       ├── server_mqtt.py
 │       └── README.md
 │
-├── companion-app/                → Mobile app (futuro)
-│   └── README.md
+├── app/                          → ScouterApp — phone companion
+│   ├── web/                     → PoC: WebSocket + HTML control page
+│   ├── flutter/                 → MVP: Flutter app (Android + iOS)
+│   └── overlay/                 → Tactile overlay 3D models
+│
+├── gauntlet/                    → (opcional) ESP32 firmware + hardware
+│
+├── bridge/                      → (planned) ESP32 firmware + hardware
 │
 └── media/
     ├── photos/
@@ -903,15 +927,12 @@ dtparam=spi=on
 # I2C (si se usa OLED alt)
 dtparam=i2c_arm=on
 
-# Cámara
-start_x=1
-gpu_mem=128  # Necesario para Pi Camera
-
 # Reducir consumo - deshabilitar HDMI
 hdmi_blanking=2
 
-# Camera LED off (no delatar que estamos escaneando)
-disable_camera_led=1
+# --- Solo si se instala módulo de cámara opcional ---
+# start_x=1
+# gpu_mem=128  # Necesario para Pi Camera
 ```
 
 ### 6.4 Device Emulator Hub
@@ -1160,28 +1181,23 @@ def get_display_backend():
         return DesktopBackend()
 ```
 
-**Emulación de cámara para QR scanning en desktop:**
+**Simulación de QR scanning en desktop:**
 
-En desktop, en lugar de capturar frames de la Pi Camera, el emulador permite:
-1. **Cargar imagen QR desde archivo:** Simula un scan apuntando a un PNG generado por el emulador de dispositivos.
-2. **Usar webcam del laptop:** Si hay webcam disponible, captura frames con OpenCV para escanear QR reales impresos.
+En desktop, el QR scanning se simula sin cámara usando el flag `--demo` que inyecta la URL QR-Link directamente (equivale a lo que la ScouterApp enviaría por BLE/WiFi). También se puede usar `--preview` para renderizar a archivo PNG en vez de ventana pygame (útil en WSL2 o servidores headless).
 
-```python
-# camera/backend_desktop.py
-class DesktopCameraBackend:
-    """Fallback: carga QR desde archivo o usa webcam con OpenCV."""
-    def capture_frame(self) -> PIL.Image:
-        if self.use_webcam and self.webcam:
-            ret, frame = self.webcam.read()
-            return PIL.Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-        else:
-            return PIL.Image.open(self.test_qr_path)
+```bash
+# Demo mode: simula scan de QR + conexión directa
+cd software && PYTHONPATH=. python -m scouterhud.main \
+    --preview --demo monitor-bed-12 --broker localhost:1883 --topic ward3/bed12/vitals
 ```
+
+> **Nota:** El módulo `camera/` existe para el módulo de cámara opcional. Ver [camera-tech-doc.md](camera-tech-doc.md).
 
 **Qué se puede desarrollar en desktop sin hardware:**
 - 100% del renderer, layouts y widgets
 - 100% del QR-Link protocol parser y connection manager
 - 100% de la integración con el Device Emulator Hub (MQTT)
+- 100% del input system (keyboard como proxy de App/Gauntlet)
 - Pipeline de audio (STT/TTS) con mic/speakers del laptop
 - AI agent (Claude API)
 - Home screen, apps, navegación
@@ -1205,12 +1221,12 @@ software/scouterhud/display/
 ├── layouts.py              → Device-type layouts
 └── fonts/
 
-software/scouterhud/camera/
+software/scouterhud/camera/    → (opcional — solo con módulo de cámara)
 ├── __init__.py
 ├── backend.py              → ABC CameraBackend
-├── backend_picamera.py     → Pi Camera (Pi Zero)
+├── backend_picamera.py     → Pi Camera (Pi Zero, requiere módulo)
 ├── backend_desktop.py      → Webcam / file loader (laptop)
-└── qr_decoder.py           → QR detection (pyzbar, backend-agnostic)
+└── qr_decoder.py           → QR detection (pyzbar)
 ```
 
 ### 6.6 QR-Link Engine — Implementación
@@ -1220,20 +1236,15 @@ software/scouterhud/camera/
 ```python
 # Pseudocode del QR-Link engine loop
 
-async def qrlink_scan_mode():
-    """Activate camera, scan for QR, connect to device."""
-    camera = PiCamera2(resolution=(640, 480))
-
-    while scanning:
-        frame = await camera.capture_async()
-        qr_data = decode_qr(frame)  # pyzbar
-
-        if qr_data:
-            device = QRLinkProtocol.parse(qr_data)
-            if device.is_valid():
-                connection = await ConnectionManager.connect(device)
-                await switch_to_viewer(device, connection)
-                return
+async def receive_qrlink_from_app(url: str):
+    """Recibe URL QR-Link desde la ScouterApp (BLE/WiFi)."""
+    device = QRLinkProtocol.parse(url)
+    if device.is_valid():
+        # Si requiere auth, la app ya envió credenciales por biometría
+        if device.auth != "open":
+            credentials = await app_connection.receive_credentials()
+        connection = await ConnectionManager.connect(device, credentials)
+        await switch_to_viewer(device, connection)
 
 async def device_viewer(device, connection):
     """Receive live data and render on display."""
@@ -1243,6 +1254,8 @@ async def device_viewer(device, connection):
         frame = layout.render(data)
         display.show(frame)
 ```
+
+> **Nota:** Con el módulo de cámara opcional, el HUD puede escanear QR directamente usando `camera/backend_picamera.py`. Ver [camera-tech-doc.md](camera-tech-doc.md).
 
 **Generador de QR codes (herramienta CLI):**
 
@@ -1306,7 +1319,7 @@ python generate_qr.py \
 
 ## 7. Roadmap de desarrollo
 
-### Phase 0 — Proof of Concept: Óptica (Semana 1-2)
+### Phase 0 — Proof of Concept: Óptica (pendiente — cuando llegue hardware)
 
 **Objetivo:** Validar que el sistema see-through funciona y es legible.
 
@@ -1321,43 +1334,61 @@ python generate_qr.py \
 
 **Criterio de éxito:** Leer texto de 14px en el display a través del beam splitter mientras se ve el entorno real detrás, por 5+ minutos sin fatiga.
 
-### Phase 1 — QR-Link MVP (Semana 3-5)
+### Phase 1 — Software HUD (COMPLETADO)
 
-**Objetivo:** Escanear QR y mostrar datos en vivo de un dispositivo emulado.
+**Objetivo:** Software funcional end-to-end en desktop sin hardware.
 
-- [ ] **Emulador primero:** Implementar Device Emulator Hub
-  - [ ] Base device class + realistic data generators
-  - [ ] Medical monitor emulator (escenario stable_patient)
-  - [ ] Vehicle OBD-II emulator (escenario city_driving)
-  - [ ] Server infra emulator (escenario normal_load)
-  - [ ] `config.yaml` con 3-5 dispositivos de demo
-  - [ ] `generate_all_qrs.py` → PDF imprimible con QR codes
-  - [ ] Docker compose con Mosquitto + emulador
-- [ ] **Desktop emulator:** Implementar DisplayBackend ABC + DesktopBackend (pygame)
-- [ ] **Desktop emulator:** Implementar CameraBackend ABC + DesktopCameraBackend (webcam/archivo)
-- [ ] Implementar QR scanning con pyzbar (backend-agnostic)
-- [ ] Implementar QR-Link protocol parser (formato URL compacto + metadata lookup)
-- [ ] Implementar MQTT transport en ScouterHUD
-- [ ] Implementar PIN auth (Nivel 1)
-- [ ] Renderizar datos del emulador en el desktop emulator (pygame)
-- [ ] Validar flujo completo en desktop: scan QR → connect MQTT → render datos
-- [ ] Conectar Pi Camera, validar captura en hardware real
+- [x] **Emulador:** Device Emulator Hub con 5 dispositivos
+  - [x] Base device class + realistic data generators (ruido gaussiano, correlaciones)
+  - [x] Medical monitor, Vehicle OBD-II, Server infra, Home thermostat, Industrial machine
+  - [x] `config.yaml` con 5 dispositivos de demo
+  - [x] `generate_all_qrs.py` → PNG + PDF imprimible con QR codes
+- [x] **Display:** DisplayBackend ABC + PreviewBackend (PNG) + DesktopBackend (pygame)
+- [x] **Renderer:** 6 layouts especializados por device type + status screens + device list
+- [x] **Widgets:** Reusable UI components (progress bars, gauges, alerts, borders)
+- [x] **QR-Link:** Protocol parser + MQTT transport
+- [x] **Auth:** PIN auth flow interactivo (w/s/a/d + enter/x)
+- [x] **Input:** Keyboard input con navigation y numeric modes (App/Gauntlet-ready)
+- [x] **Multi-device:** Device history con switching (next/prev/list)
+- [x] **State machine:** SCANNING → AUTH → CONNECTING → STREAMING → DEVICE_LIST → ERROR
+- [x] **Tests:** 116 unit tests (pytest) — protocol, auth, renderer, input, connection, gauntlet
+- [x] **Gauntlet:** BLE input stub (arquitectura lista para ESP32)
+
+### Phase A — ScouterApp (EN PROGRESO)
+
+**Objetivo:** App companion que reemplaza la cámara del HUD para escaneo QR y agrega autenticación biométrica.
+
+**Phase A0 — PoC Web:**
+- [ ] WebSocket server en el HUD (asyncio)
+- [ ] Página HTML control page con botones D-pad
+- [ ] QR scanning desde la web page (cámara del celular via browser)
+- [ ] Envío de URL QR-Link al HUD por WebSocket
+- [ ] Validar flujo: scan en celular → URL al HUD → conexión → datos
+
+**Phase A1 — Flutter MVP:**
+- [ ] App Flutter (Android + iOS)
+- [ ] QR scanning con cámara del celular
+- [ ] Autenticación biométrica (FaceID/huella) para desbloquear credenciales
+- [ ] Almacenamiento seguro de credenciales (Keychain/Keystore)
+- [ ] BLE connection al HUD
+- [ ] D-pad control, device list, configuración
+
+**Phase A2 — Tactile Overlay:**
+- [ ] Diseño 3D del molde para membrana de silicona/TPU
+- [ ] Relieves para botones sin mirar
+- [ ] Compatibilidad con guantes médicos (nitrilo)
+
+### Phase 2 — Hardware + Audio
+
 - [ ] Implementar SPIBackend para display real en Pi Zero
-- [ ] **Test de memoria temprano:** Medir consumo de RAM con picamera2 + Vosk + paho-mqtt + Pillow corriendo simultáneamente en Pi Zero 2W (512MB). Establecer baseline y límites.
 - [ ] Primer print 3D del housing óptico
-
-### Phase 2 — Software completo (Semana 6-8)
-
-- [ ] Display renderer con layout system y widgets
-- [ ] Layouts automáticos por device type
 - [ ] Audio: USB sound card + mic + auricular
 - [ ] Vosk STT para comandos de voz ("escanear", "hora", "cerrar")
 - [ ] Home screen (reloj, batería, estado WiFi)
-- [ ] generate_qr.py CLI tool
-- [ ] Segundo transport: HTTP/SSE
-- [ ] Primer print 3D del frame completo (vincha)
+- [ ] **Test de memoria:** Medir consumo de RAM con Vosk + paho-mqtt + Pillow en Pi Zero 2W (512MB)
+- [ ] (Opcional) Conectar módulo de cámara, validar con backend_picamera.py
 
-### Phase 3 — AI + Polish (Semana 9-12)
+### Phase 3 — AI + Polish
 
 - [ ] Pipeline STT → Claude API → TTS → Display
 - [ ] AI puede interpretar datos del dispositivo conectado
@@ -1369,10 +1400,9 @@ python generate_qr.py \
 - [ ] Script setup.sh automatizado
 - [ ] Video demo para publicación
 
-### Phase 4 — Publish & Community (Semana 13-14)
+### Phase 4 — Publish & Community
 
 - [ ] README pulido (GIF hero, badges, screenshots)
-- [ ] Publicar en GitHub
 - [ ] Publicar en Hackaday.io
 - [ ] Serie de posts en LinkedIn (ver sección 9)
 - [ ] Post en Reddit (r/raspberry_pi, r/DIY, r/AugmentedReality, r/IoT)
@@ -1380,9 +1410,9 @@ python generate_qr.py \
 
 ### Phase 5+ — Expansion (Futuro)
 
-- [ ] Example devices: ESP32 sensor real, OBD-II bridge
-- [ ] Companion app móvil (Flutter) para notificaciones
-- [ ] Transports adicionales: WebSocket, BLE
+- [ ] ScouterBridge: ESP32 sensor real, OBD-II bridge, Serial bridge, BLE bridge
+- [ ] ScouterGauntlet: firmware ESP32 + capacitive pads
+- [ ] Transports adicionales: WebSocket, BLE, HTTP/SSE
 - [ ] PCB custom (KiCad)
 - [ ] Upgrade a Pi CM4 / Pi 5 para AI local (Whisper + small LLM)
 - [ ] Conducción ósea para audio
@@ -1397,7 +1427,7 @@ python generate_qr.py \
 |--------|---------|-------------|------------|
 | Beam splitter con mala relación reflejo/transparencia | Alto | Media | Probar múltiples materiales en Phase 0, comprar muestras |
 | Display no suficientemente brillante para see-through | Alto | Media | Usar TFT IPS de alto brillo, ajustar PWM al máximo, testear en diferentes condiciones de luz |
-| Pi Camera lenta para decodificar QR | Medio | Baja | 640x480 con pyzbar es rápido (~100ms). Fallback: pre-crop de ROI |
+| App no disponible para scan QR | Medio | Baja | Fallback: input manual de URL, o módulo de cámara opcional |
 | Pi Zero 2W lento para STT local | Alto | Alta | Usar Vosk (más liviano) para comandos, API para queries largas |
 | Fatiga visual tras uso prolongado | Medio | Alta | Iterar óptica, permitir ajuste de brillo/posición, documentar límites |
 | Calentamiento del Pi en enclosure | Medio | Media | Ventilas en diseño 3D, disipador de cobre adhesivo |
@@ -1410,18 +1440,18 @@ python generate_qr.py \
 
 ### 9.1 Narrative del proyecto
 
-**Tagline:** "Scan any device. See its data. Open source AR for $60."
+**Tagline:** "Scan any device. See its data. Open source AR for ~$50."
 
-**Story alternativo:** "What if any device could show you its data just by looking at it?"
+**Story alternativo:** "What if you could scan any device and see its data floating in front of your eye?"
 
-El QR-Link protocol es el diferenciador principal. No es "otro proyecto de smart glasses DIY" — es un estándar abierto para que cualquier dispositivo pueda comunicarse con un wearable visual. Los lentes son el hardware; QR-Link es la innovación.
+El QR-Link protocol es el diferenciador principal. No es "otro proyecto de smart glasses DIY" — es un estándar abierto para que cualquier dispositivo pueda comunicarse con un wearable visual. Los lentes son el hardware; QR-Link es la innovación. **Sin cámara en la cara** — privacidad por diseño.
 
 ### 9.2 Contenido a crear
 
 **Serie LinkedIn (5 posts):**
 1. "Estoy construyendo un scouter de Dragon Ball Z que lee dispositivos IoT" (hook + concepto + render)
-2. "¿Y si pudieras ver los datos de cualquier dispositivo solo mirándolo?" (demo del QR-Link protocol)
-3. "Primer prototipo funcional por menos de $60" (video demo, BOM)
+2. "¿Y si pudieras escanear cualquier dispositivo y ver sus datos en tu ojo?" (demo del QR-Link protocol)
+3. "Primer prototipo funcional por menos de $50 — sin cámara en la cara" (video demo, BOM, privacidad)
 4. "Diseñé un protocolo abierto para que cualquier dispositivo hable con un wearable" (technical deep dive)
 5. "El repo es público. Construílo vos también." (GitHub link + call to action)
 
@@ -1441,12 +1471,14 @@ El QR-Link protocol es el diferenciador principal. No es "otro proyecto de smart
 
 | Aspecto | DIY existentes | Brilliant Monocle | ScouterHUD |
 |---------|---------------|-------------------|------------|
-| Precio | $30-80 | $349 | $50-68 |
+| Precio | $30-80 | $349 | ~$40-55 |
 | See-through | Raro | Sí (micro OLED) | Sí (beam splitter) |
-| Cámara | Raro | Sí (5MP) | Sí (5MP, QR scan) |
+| Cámara | Raro | Sí (5MP) | **No (privacidad)** — scan via app |
 | QR-Link protocol | No | No | **Sí (innovación)** |
-| Device discovery | No | No | **Sí (escaneo visual)** |
+| Device discovery | No | No | **Sí (escaneo visual via app)** |
+| Privacidad | Varía | Cámara siempre | **Sin cámara — entra a cualquier espacio** |
 | AI integrado | No | Sí (arGPT) | Sí (Claude + Vosk) |
+| Auth biométrica | No | No | **Sí (FaceID/huella via app)** |
 | Documentación | Fragmentada | Buena | Excelente (objetivo) |
 | Reproducibilidad | Difícil | Comprar ($349) | Fácil (BOM + guía) |
 
@@ -1462,7 +1494,7 @@ El QR-Link protocol es el diferenciador principal. No es "otro proyecto de smart
 - **MIT µ-HUD** — Paper original de micro HUD con beam splitter (1990s)
 
 ### Librerías clave
-- `picamera2` — Pi Camera capture (official)
+- `picamera2` — Pi Camera capture (solo con módulo de cámara opcional)
 - `pyzbar` — QR/barcode decoding
 - `luma.lcd` / `luma.oled` — Display drivers
 - `Pillow` — Image rendering
@@ -1480,6 +1512,6 @@ El QR-Link protocol es el diferenciador principal. No es "otro proyecto de smart
 - Raspberry Pi Zero 2W Product Brief
 - ST7789 TFT Display Controller
 - SSD1306 OLED Controller
-- OV5647 Camera Sensor (Pi Camera v1)
+- OV5647 Camera Sensor (Pi Camera v1 — solo con módulo opcional)
 - TP4056 Li-ion Battery Charger
 - MT3608 DC-DC Boost Converter
