@@ -22,18 +22,26 @@ ScouterHUD necesita un método de input silencioso, rápido y accesible. La voz 
 Una aplicación para Android/iOS que se monta en el antebrazo con un strap y funciona como el control principal del ScouterHUD. Se comunica por BLE o WiFi con el HUD y ofrece:
 
 - D-pad para navegación
-- Teclado numérico para PIN/TOTP
+- Autenticación biométrica (FaceID/huella) — reemplaza PIN/TOTP manual
+- Escaneo de QR codes con la cámara del celular — reemplaza cámara en el HUD
 - Lista de dispositivos conectados
 - Quick actions (scan QR, toggle voice, lock)
 - Configuración del HUD
 
 **Orientación: Landscape** — el celular se monta horizontal en el antebrazo, porque cuando mirás tu brazo, el antebrazo está perpendicular a tu línea de visión.
 
-### 1.3 Qué NO es
+### 1.3 Roles clave de la app
+
+Además de ser el control remoto del HUD, la ScouterApp asume dos funciones críticas que permiten simplificar el hardware del HUD:
+
+1. **Escáner QR (reemplaza la cámara del HUD):** La cámara del celular escanea los QR codes y envía la URL al HUD por BLE/WiFi. Esto elimina la necesidad de una Pi Camera en el HUD, reduciendo costo (~$12-17 menos), complejidad, y — lo más importante — **eliminando las preocupaciones de privacidad** de un wearable con cámara siempre presente. Ver [camera-tech-doc.md](camera-tech-doc.md) para detalles.
+
+2. **Autenticación biométrica (reemplaza PIN/TOTP manual):** FaceID o huella dactilar del celular autentican al usuario. Las credenciales se almacenan en el hardware seguro del celular (Keychain/Keystore). Más rápido, más seguro, y silencioso — no hay que decir un código en voz alta ni teclearlo manualmente.
+
+### 1.4 Qué NO es
 
 - No reemplaza el HUD (no muestra los datos AR)
-- No es obligatoria (el HUD funciona con voz y QR sin la app)
-- No es un segundo display — es un control remoto inteligente
+- No es un segundo display — es un control remoto inteligente + escáner + autenticador
 
 ### 1.4 Accesorio opcional: Tactile Overlay
 
@@ -173,7 +181,125 @@ La app puede actuar como relay: el celular se conecta al broker MQTT y retransmi
 
 ---
 
-## 4. Tactile Overlay — Diseño
+## 4. Escaneo QR desde la app
+
+### 4.1 Por qué la cámara del celular y no la del HUD
+
+**Privacidad.** Un wearable con cámara genera rechazo social, problemas legales (HIPAA, GDPR), y prohibiciones de acceso en hospitales, juzgados, datacenters y fábricas. La cámara del celular es **intencional** — el usuario activamente apunta y escanea, no hay ambigüedad. Ver [camera-tech-doc.md](camera-tech-doc.md) para el análisis completo de privacidad.
+
+Beneficios adicionales:
+- **$0 de costo adicional** — el celular ya tiene cámara (y mejor que cualquier Pi Camera)
+- **Menos hardware** en el HUD — menos peso, menos cables, menos puntos de fallo
+- **HUD = display puro** — entra a cualquier espacio sin restricciones
+
+### 4.2 Flujo de escaneo
+
+```
+1. Usuario ve un QR code en un dispositivo
+2. Toca [Scan QR] en la app (o gesto rápido en el Gauntlet)
+3. Se abre la cámara del celular
+4. La app detecta y parsea el QR: qrlink://v1/{id}/mqtt/...
+5. Envía la URL al HUD por BLE o WiFi
+6. El HUD se conecta al dispositivo vía MQTT
+7. Si requiere auth → la app pide biometría (ver sección 5)
+8. Datos en vivo aparecen en el HUD
+```
+
+### 4.3 Pantalla de escaneo
+
+```
+┌──────────────────────────────────────────────────┐
+│ Scan QR Code                         [Cancel]     │
+│──────────────────────────────────────────────────│
+│                                                   │
+│   ┌──────────────────────────────────────────┐   │
+│   │                                          │   │
+│   │         📷  CAMERA VIEWFINDER           │   │
+│   │                                          │   │
+│   │        ┌────────────────┐               │   │
+│   │        │   QR TARGET    │               │   │
+│   │        └────────────────┘               │   │
+│   │                                          │   │
+│   └──────────────────────────────────────────┘   │
+│                                                   │
+│  Point camera at a QR-Link code                   │
+└──────────────────────────────────────────────────┘
+```
+
+La app auto-detecta el QR sin que el usuario presione un botón. Al detectar un QR-Link válido, vibra y envía automáticamente al HUD.
+
+---
+
+## 5. Autenticación biométrica
+
+### 5.1 Por qué biometría
+
+Con la ScouterApp, los PIN y TOTP manuales se vuelven innecesarios para la mayoría de los casos:
+
+| Método anterior | Con biometría |
+|----------------|--------------|
+| Ingresar PIN 4 dígitos manualmente en el HUD | Tocar el sensor de huella del celular (0.3s) |
+| Ingresar TOTP 6 dígitos con timer | FaceID mira la pantalla (0.5s) |
+| Decir código en voz alta (inseguro) | Silencioso y automático |
+| Alguien puede ver el PIN | Biometría no se puede copiar |
+
+### 5.2 Flujo de autenticación
+
+```
+1. HUD intenta conectarse a un dispositivo protegido
+2. El dispositivo requiere auth (ej: auth=pin en el QR-Link)
+3. HUD envía request de auth a la app por BLE/WiFi
+4. La app muestra: "Authenticate for monitor-bed-12"
+5. El usuario toca el sensor de huella o usa FaceID
+6. La app recupera las credenciales del Keychain/Keystore
+7. Envía el token/PIN al HUD por canal encriptado
+8. El HUD se autentica con el dispositivo
+9. Datos en vivo aparecen → el usuario nunca tecleó nada
+```
+
+### 5.3 Almacenamiento seguro
+
+Las credenciales se almacenan en el **hardware seguro** del celular:
+
+| Plataforma | Storage | Protección |
+|-----------|---------|------------|
+| iOS | Keychain + Secure Enclave | Hardware-encrypted, biometric-gated |
+| Android | Keystore + StrongBox | Hardware-backed, biometric-gated |
+
+- Cada dispositivo QR-Link tiene su credencial almacenada por separado
+- La primera vez, el usuario ingresa el PIN/token manualmente (o lo recibe por provisioning)
+- Las siguientes veces, la biometría desbloquea las credenciales almacenadas
+- Si la biometría falla, hay fallback a PIN manual en la app
+
+### 5.4 Niveles de seguridad actualizados
+
+| Nivel | Método | Ejemplo |
+|-------|--------|---------|
+| 0 — Open | Sin auth | Termostato de casa, datos públicos |
+| 1 — Biometric | FaceID/huella desbloquea credencial almacenada | Monitor médico de ward, vehículo personal |
+| 2 — Biometric + PIN de sesión | Biometría + PIN cada N minutos | Servidor de producción, datos financieros |
+| 3 — Mutual TLS | Certificado del dispositivo + certificado del HUD | Infraestructura crítica |
+| 4 — Multi-factor | Biometría + certificado + aprobación remota | Equipos nucleares, militares |
+
+### 5.5 Comunicación local y encriptada
+
+Toda la comunicación del ecosistema es **local** — no pasa por la nube:
+
+```
+App ←─── BLE (encrypted) ───► HUD ←─── WiFi/TLS ───► Dispositivo
+                                                         │
+                                                    MQTT broker
+                                                    (red local)
+```
+
+- **BLE:** Encriptación nativa BLE 4.2+ (AES-CCM)
+- **WiFi:** TLS 1.3 para WebSocket, mTLS opcional
+- **MQTT:** TLS al broker, auth por credenciales o certificados
+- **Sin cloud:** El broker MQTT está en la red local, no en internet
+
+---
+
+## 6. Tactile Overlay — Diseño
 
 ### 4.1 Materiales
 
@@ -213,9 +339,9 @@ La app tiene un modo de calibración que muestra los botones y el usuario ajusta
 
 ---
 
-## 5. Stack técnico
+## 7. Stack técnico
 
-### 5.1 Opciones de desarrollo
+### 7.1 Opciones de desarrollo
 
 | Framework | Plataforma | BLE | Pros | Contras |
 |-----------|-----------|-----|------|---------|
@@ -228,7 +354,7 @@ La app tiene un modo de calibración que muestra los botones y el usuario ajusta
 
 **Alternativa rápida para PoC:** PWA con Web Bluetooth — cero instalación, se prueba desde el browser. Limitado a Android/Chrome pero valida el concepto en minutos.
 
-### 5.2 Comunicación
+### 7.2 Comunicación
 
 ```
 ScouterApp (celular)
@@ -243,7 +369,7 @@ ScouterApp (celular)
 
 ---
 
-## 6. Roadmap
+## 8. Roadmap
 
 ### Phase A0 — PoC WebSocket (se puede hacer AHORA, sin hardware)
 
@@ -258,7 +384,8 @@ ScouterApp (celular)
 ### Phase A1 — App Flutter MVP
 
 - [ ] Flutter app con pantalla de control (D-pad + confirm + cancel)
-- [ ] Pantalla de PIN entry (numpad)
+- [ ] QR scanning desde la cámara del celular (reemplaza cámara del HUD)
+- [ ] Autenticación biométrica (FaceID/huella) con Keychain/Keystore
 - [ ] Pantalla de device list
 - [ ] Comunicación BLE con el HUD
 - [ ] Pairing flow (escanear QR del HUD)
@@ -275,13 +402,13 @@ ScouterApp (celular)
 
 - [ ] Modo relay MQTT (celular como puente WiFi→BLE)
 - [ ] Notificaciones push de alertas del HUD
-- [ ] QR scan desde cámara del celular (además de la del HUD)
 - [ ] Configuración remota del HUD (brillo, layouts)
 - [ ] Widget de Android para quick status
+- [ ] Batch QR scanning (escanear múltiples devices en secuencia rápida)
 
 ---
 
-## 7. Relación con ScouterGauntlet (ESP32)
+## 9. Relación con ScouterGauntlet (ESP32)
 
 El Gauntlet ESP32 **no desaparece** — pasa a ser un accesorio opcional para casos extremos:
 
@@ -299,7 +426,7 @@ Ambos usan el mismo protocolo BLE GATT, el mismo `InputBackend`, los mismos `Inp
 
 ---
 
-## 8. Repositorio
+## 10. Repositorio
 
 ```
 scouterhud/

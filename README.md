@@ -1,8 +1,8 @@
 # ScouterHUD
 
-**Scan any device. See its data. Open source AR for ~$85.**
+**Scan any device. See its data. Open source AR for ~$50.**
 
-An open-source wearable ecosystem that lets you see any device's data floating in front of your eye in real time — just by looking at its QR code. No screens. No touching. Hands free.
+An open-source wearable ecosystem that lets you see any device's data floating in front of your eye in real time. Scan a QR code with your phone, authenticate with your fingerprint, and live data appears in your HUD. No screens. No touching. Hands free. **No camera on your face** — privacy by design.
 
 <p align="center">
   <img src="docs/Gemini_Generated_Image_rrk36lrrk36lrrk3.png" width="280" alt="ScouterHUD headset concept"/>
@@ -14,20 +14,22 @@ An open-source wearable ecosystem that lets you see any device's data floating i
 
 ## How it works
 
-Every device has a small QR code. When you look at it through the ScouterHUD, the system connects automatically and shows live data overlaid on your vision.
+Every device has a small QR code. You scan it with the ScouterApp on your phone, authenticate with your fingerprint or FaceID, and live data appears in your HUD — overlaid on your real vision.
 
 ```
-You look at a QR          The HUD camera          Live data appears
-on a patient    ────────► detects it and  ────────► in your field
-monitor                   connects via MQTT        of vision
+You scan a QR             The app sends it         Live data appears
+with your phone  ────────► to the HUD, which ────────► in your field
+(ScouterApp)              connects via MQTT         of vision
 ```
+
+**Why no camera on the HUD?** Privacy. A wearable camera causes social rejection ("Glassholes" effect), legal issues (HIPAA, GDPR), and access bans in hospitals, courtrooms, and datacenters. Your phone camera is intentional and controlled — you actively point and scan. The HUD stays a pure display device that can go anywhere.
 
 ## The ecosystem
 
 | Component | What it does | Cost |
 |-----------|-------------|------|
-| **ScouterHUD** | Monocular see-through display + camera + AI assistant | ~$55 |
-| **ScouterApp** | Phone app mounted on forearm (landscape) — primary input: D-pad, PIN pad, device list | Free |
+| **ScouterHUD** | Monocular see-through display + AI assistant (no camera — privacy first) | ~$40-45 |
+| **ScouterApp** | Phone app mounted on forearm (landscape) — QR scanning, biometric auth, D-pad, device list | Free |
 | **ScouterBridge** | Dongle that translates legacy devices (USB, OBD-II, Serial, BLE) to QR-Link | ~$8-15 |
 | **ScouterGauntlet** | *(optional)* ESP32 wrist device with capacitive pads — for heavy gloves, IP67, no-phone use | ~$15 |
 
@@ -46,23 +48,25 @@ An open protocol we created for visual device discovery. A QR code contains a co
 qrlink://v1/{device_id}/mqtt/{host}:{port}?auth={auth}&t={topic}
 ```
 
-The HUD scans it, connects, fetches metadata from `$meta`, and renders the right layout automatically. It's like Bluetooth pairing, but visual.
+The HUD receives the URL from the app, connects, fetches metadata from `$meta`, and renders the right layout automatically. It's like Bluetooth pairing, but visual.
 
-**Security levels:** Open (public data) / PIN (entered silently via App or Gauntlet) / Token / Mutual TLS / Biometric
+The app scans it with the phone camera, sends the URL to the HUD, and it connects automatically. Authentication is handled by your phone's biometrics (FaceID/fingerprint) — no PINs to type or say out loud.
+
+**Security levels:** Open (public data) / Biometric (FaceID/fingerprint) / Biometric + PIN / Mutual TLS / Multi-factor
 
 ## Current status
 
 The software is functional and tested end-to-end on desktop:
 
 - **Device Emulator** — 5 simulated IoT devices publishing realistic data via MQTT
-- **ScouterHUD Software** — QR scanning, MQTT transport, 6 device-specific layouts, preview mode
+- **ScouterHUD Software** — MQTT transport, 6 device-specific layouts, preview mode (no camera needed)
 - **Input System** — Keyboard input with navigation and numeric modes (App/Gauntlet-ready architecture)
 - **PIN Auth** — Interactive PIN entry screen with validation and retry
 - **Multi-device** — Device history with switching (next/prev/list)
 - **State Machine** — SCANNING > AUTH > CONNECTING > STREAMING > DEVICE_LIST > ERROR
 - **116 Unit Tests** — Full coverage of protocol, auth, renderer, input, connection, gauntlet
 
-Next: ScouterApp PoC (WebSocket + HTML control page), then hardware prototyping.
+Next: ScouterApp PoC (WebSocket + HTML control page with QR scanning + biometric auth), then hardware prototyping.
 
 See [docs/STATUS.md](docs/STATUS.md) for detailed progress.
 
@@ -133,7 +137,7 @@ scouterHUD/
 │   │   ├── display/             # Display backends (pygame, preview, SPI)
 │   │   │   ├── renderer.py      # 6 layouts + status screens + device list
 │   │   │   └── widgets.py       # Reusable UI components
-│   │   ├── camera/              # Camera backends (desktop, Pi)
+│   │   ├── camera/              # Camera backends (optional — see camera-tech-doc.md)
 │   │   ├── qrlink/              # QR-Link protocol + MQTT transport
 │   │   ├── input/               # Input system (keyboard, App/Gauntlet BLE)
 │   │   └── auth/                # PIN auth flow
@@ -149,7 +153,8 @@ scouterHUD/
 │   ├── ecosystem-overview.md
 │   ├── app-tech-doc.md          # ScouterApp design
 │   ├── bridge-tech-doc.md
-│   └── gauntlet-tech-doc.md
+│   ├── gauntlet-tech-doc.md
+│   └── camera-tech-doc.md      # Optional camera module (privacy analysis)
 │
 ├── gauntlet/                    # (optional) ESP32 firmware + hardware
 └── bridge/                      # (planned) ESP32 firmware + hardware
@@ -161,9 +166,10 @@ scouterHUD/
 |-----------|-----------|-----------|---------------|---------------------|
 | Processor | Raspberry Pi Zero 2W | Your phone | ESP32-S3 | ESP32-S3 |
 | Display | 1.3" ST7789 240x240 | Phone screen | — | — |
-| Battery | 18650 3000mAh (5-10 hrs) | Phone battery | Device-powered | LiPo 400mAh (5-7 days) |
+| Camera | None (privacy) | Phone camera (QR scan) | — | — |
+| Battery | LiPo 2000-3000mAh (5-10 hrs) | Phone battery | Device-powered | LiPo 400mAh (5-7 days) |
 | Connection | WiFi + BT | BLE/WiFi to HUD | WiFi/MQTT | BLE to HUD |
-| Weight | ~150g | Phone + strap | ~15-25g | ~30g |
+| Weight | ~120g (no camera) | Phone + strap | ~15-25g | ~30g |
 
 ## Tech stack
 
@@ -182,6 +188,7 @@ scouterHUD/
 - [ScouterApp Design](docs/app-tech-doc.md) — Phone companion app + tactile overlay
 - [ScouterBridge Design](docs/bridge-tech-doc.md) — Universal device adapter
 - [ScouterGauntlet Design](docs/gauntlet-tech-doc.md) — Optional wrist input device (ESP32)
+- [Camera Module](docs/camera-tech-doc.md) — Optional camera add-on (privacy analysis + when it makes sense)
 
 ## Why open source
 

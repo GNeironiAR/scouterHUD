@@ -35,7 +35,9 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 | Gauntlet firmware | `gauntlet/firmware/` (ESP32, PlatformIO) | Accesorio opcional (guantes gruesos, IP67) | Baja (opcional) |
 | Bridge firmware | `bridge/firmware/` (ESP32, PlatformIO) | Hardware del Bridge | Cuando llegue el ESP32 |
 | SPI display backend | `display/backend_spi.py` (ST7789) | HUD real en Pi Zero 2W | Cuando llegue el hardware |
-| PiCamera backend | `camera/backend_pi.py` | QR scan en HUD real | Cuando llegue el hardware |
+| PiCamera backend | `camera/backend_pi.py` | QR scan en HUD (opcional, ver [camera-tech-doc](camera-tech-doc.md)) | Baja (opcional — privacidad) |
+| **QR scan desde App** | `app/` + `PhoneInput` | **QR scanning principal** (cámara del celular) | **Incluido en Phase A0/A1** |
+| **Auth biométrica** | `app/` | FaceID/huella reemplaza PIN/TOTP manual | **Incluido en Phase A1** |
 
 ---
 
@@ -56,15 +58,16 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 | 2 | Display ST7789 1.3" 240x240 SPI | Pantalla del HUD | ~$8-12 |
 | 3 | Beam splitter / half mirror film | Pantalla semitransparente | ~$5-10 |
 | 4 | Lente asférica 25-30mm | Enfocar display a distancia corta | ~$3-5 |
-| 5 | Pi Camera Module v2 (o compatible Zero) | Escaneo de QR codes | ~$10-15 |
-| 6 | MicroSD 16GB+ | OS + software | ~$5 |
-| 7 | Batería LiPo 3.7V 2000-3000mAh | Alimentación (~5-10 hrs) | ~$8-12 |
-| 8 | Regulador step-up 5V (MT3608 o similar) | LiPo 3.7V → 5V para Pi | ~$2 |
-| 9 | Cargador TP4056 USB-C | Cargar batería | ~$1-2 |
-| 10 | Cable flex FPC / jumper wires | Conexión SPI al display | ~$2 |
-| 11 | Filamento PLA/PETG | Imprimir housing óptico | ~$5 (parcial) |
+| 5 | MicroSD 16GB+ | OS + software | ~$5 |
+| 6 | Batería LiPo 3.7V 2000-3000mAh | Alimentación (~5-10 hrs) | ~$8-12 |
+| 7 | Regulador step-up 5V (MT3608 o similar) | LiPo 3.7V → 5V para Pi | ~$2 |
+| 8 | Cargador TP4056 USB-C | Cargar batería | ~$1-2 |
+| 9 | Cable flex FPC / jumper wires | Conexión SPI al display | ~$2 |
+| 10 | Filamento PLA/PETG | Imprimir housing óptico | ~$5 (parcial) |
 
-**Subtotal ScouterHUD: ~$55-85 USD**
+**Subtotal ScouterHUD: ~$40-55 USD** (sin cámara — ver [camera-tech-doc.md](camera-tech-doc.md) para módulo opcional +$12-17)
+
+> **Nota de privacidad:** La cámara fue removida del HUD base por una decisión deliberada de privacidad. Un wearable con cámara genera desconfianza, problemas legales, y prohibiciones de acceso. El escaneo QR se hace desde la ScouterApp (cámara del celular). Ver [camera-tech-doc.md](camera-tech-doc.md).
 
 ### Hardware necesario (ScouterApp — input principal)
 
@@ -274,8 +277,8 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 - [ ] Primer print 3D del housing óptico
 - [ ] Soldar y testear Pi Zero 2W + ST7789
 - [ ] Implementar `display/backend_spi.py` (ST7789 via SPI, lib: `st7789`)
-- [ ] Implementar `camera/backend_pi.py` (PiCamera, lib: `picamera2`)
-- [ ] Test de latencia QR scan → display render en Pi Zero
+- [ ] Test de latencia display render en Pi Zero
+- [ ] *(Opcional)* Implementar `camera/backend_pi.py` (PiCamera, lib: `picamera2`) — solo si se usa módulo de cámara
 
 ---
 
@@ -285,15 +288,17 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 - [ ] WebSocket server en el HUD (`ws://localhost:8765`)
 - [ ] `PhoneInput` backend que recibe eventos por WebSocket → `InputManager`
 - [ ] Página HTML landscape con D-pad + numpad + device list
-- [ ] Testear: abrir desde browser del celular → tocar botón → HUD responde
+- [ ] **QR scanning desde la página web** (Web API `getUserMedia` + jsQR)
+- [ ] Testear: abrir desde browser del celular → escanear QR → HUD se conecta
 - [ ] Documentar el flujo en STATUS.md
 
-**Criterio de éxito:** Abrir una página web en el celular → tocar un botón → el HUD responde en el preview.
+**Criterio de éxito:** Abrir una página web en el celular → escanear un QR con la cámara del celular → el HUD se conecta y muestra datos.
 
 ### Phase A1 — ScouterApp: Flutter MVP
 
 - [ ] Flutter app con pantalla de control (D-pad + confirm + cancel)
-- [ ] Pantalla PIN entry (numpad)
+- [ ] **QR scanning nativo** (cámara del celular — reemplaza cámara del HUD)
+- [ ] **Autenticación biométrica** (FaceID/huella + Keychain/Keystore)
 - [ ] Pantalla device list
 - [ ] Comunicación BLE con el HUD
 - [ ] Pairing flow (escanear QR del HUD)
@@ -356,7 +361,7 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 | Deps emulador | paho-mqtt 2.1, pyyaml 6.0, qrcode 8.2, reportlab 4.4, Pillow 12.1 |
 | Deps software | pygame 2.x, pyzbar 0.1, paho-mqtt 2.1, Pillow 12.1 |
 | Deps dev | pytest 9.x (`pip install -e ".[dev]"`) |
-| Deps futuras | bleak (BLE), st7789 (SPI display), picamera2 (Pi Camera) |
+| Deps futuras | bleak (BLE), st7789 (SPI display), picamera2 (solo con módulo de cámara opcional) |
 | Dep sistema | `libzbar0` (`sudo apt install libzbar0`), Docker |
 | Firmware tools | PlatformIO (para ESP32 Gauntlet + Bridge) |
 
