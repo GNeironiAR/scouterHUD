@@ -1,18 +1,18 @@
-# ScouterHUD — Un ecosistema wearable que te permite ver los datos de cualquier dispositivo con solo mirarlo
+# ScouterHUD — Un ecosistema wearable que te permite ver los datos de cualquier dispositivo en tiempo real
 
 ---
 
 ## La idea en una frase
 
-**¿Y si pudieras mirar cualquier dispositivo — tu auto, un monitor médico, un servidor, un sensor — y ver sus datos flotando frente a tu ojo en tiempo real?**
+**¿Y si pudieras escanear cualquier dispositivo — tu auto, un monitor médico, un servidor, un sensor — y ver sus datos flotando frente a tu ojo en tiempo real?**
 
-ScouterHUD es un ecosistema open source que hace exactamente eso, por menos de $85 USD.
+ScouterHUD es un ecosistema open source que hace exactamente eso, por menos de $50 USD. Sin cámara en la cara — privacidad por diseño.
 
 ---
 
 ## Cómo funciona
 
-El concepto es simple: cada dispositivo del mundo real tiene un pequeño código QR pegado. Cuando el usuario mira ese QR a través del ScouterHUD, el sistema se conecta automáticamente al dispositivo y muestra sus datos en vivo frente a su ojo, superpuestos sobre el mundo real. Sin tocar nada. Sin pantallas. Manos libres.
+El concepto es simple: cada dispositivo del mundo real tiene un pequeño código QR pegado. El usuario escanea ese QR con la cámara de su celular (ScouterApp), se autentica con su huella o FaceID, y los datos del dispositivo aparecen en vivo frente a su ojo, superpuestos sobre el mundo real. Manos libres. **Sin cámara en el HUD** — la privacidad es prioridad.
 
 ```
    Lo que ves                    Lo que pasa
@@ -47,7 +47,7 @@ Una vincha con una pantalla semitransparente frente al ojo derecho. Inspirado en
 - **No tiene cámara.** La decisión de no incluir cámara es deliberada: un wearable con cámara genera desconfianza, rechazo social (efecto "Glassholes"), problemas legales (HIPAA, GDPR), y prohibiciones de acceso en hospitales, juzgados y datacenters. El escaneo de QR se hace desde la app del celular — es intencional, controlado, y no levanta sospechas. Ver [camera-tech-doc.md](camera-tech-doc.md) para el módulo de cámara opcional.
 
 **Cómo se usa:**
-Se pone como una vincha. La batería en la nuca hace de contrapeso. Es cómodo por horas. Pesa menos que unos auriculares over-ear (~150g). **Sin cámara, el HUD es un dispositivo puro de display** — puede entrar a cualquier espacio sin restricciones.
+Se pone como una vincha. La batería en la nuca hace de contrapeso. Es cómodo por horas. Pesa menos que unos auriculares over-ear (~120g sin cámara). **El HUD es un dispositivo puro de display** — puede entrar a cualquier espacio sin restricciones.
 
 ---
 
@@ -111,11 +111,11 @@ QR-Link es un protocolo abierto que inventamos para este proyecto. Define cómo 
 
 1. Un dispositivo (o su Bridge) tiene un QR pegado
 2. El QR contiene: quién soy, dónde están mis datos, cómo conectarse
-3. El ScouterHUD escanea el QR con su cámara
-4. Se conecta automáticamente al dispositivo
-5. Recibe datos en vivo y los muestra en la pantalla
+3. El usuario escanea el QR con la **ScouterApp** (cámara del celular)
+4. La app envía la URL al HUD por BLE/WiFi
+5. El HUD se conecta al dispositivo y muestra los datos en vivo
 
-**Es como Bluetooth pairing, pero visual.** En vez de buscar dispositivos en un menú, simplemente mirás el QR y ya estás conectado.
+**Es como Bluetooth pairing, pero visual.** En vez de buscar dispositivos en un menú, escaneás el QR con tu celular y el HUD se conecta. La cámara del celular es intencional y controlada — el HUD no necesita cámara propia.
 
 **Seguridad:** Los datos sensibles (médicos, financieros) están protegidos. El QR te dice que el dispositivo existe, pero para ver sus datos necesitás autenticarte — con la **biometría del celular** (FaceID/huella), que desbloquea las credenciales almacenadas de forma segura (Keychain/Keystore). Para niveles más altos: certificados digitales o aprobación remota. Toda la comunicación es **local y encriptada** — no pasa por la nube.
 
