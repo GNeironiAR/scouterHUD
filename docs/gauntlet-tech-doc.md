@@ -2,12 +2,19 @@
 
 ## Technical Design Document v0.1
 
-**Project Codename:** ScouterGauntlet  
-**Companion to:** ScouterHUD  
-**Author:** Ger  
-**Date:** February 2026  
-**License:** MIT (Software) / CERN-OHL-S v2 (Hardware)  
-**Status:** Concepto / Diseño
+**Project Codename:** ScouterGauntlet
+**Companion to:** ScouterHUD
+**Author:** Ger
+**Date:** February 2026
+**License:** MIT (Software) / CERN-OHL-S v2 (Hardware)
+**Status:** Accesorio opcional
+
+> **Nota (Feb 2026):** El input principal del ecosistema es ahora la **ScouterApp** — una app
+> de celular montada en el antebrazo (landscape) con overlay táctil opcional. El Gauntlet ESP32
+> pasa a ser un **accesorio opcional** para casos extremos: guantes gruesos industriales,
+> ambientes mojados/IP67, o usuarios sin celular. Ambos usan el mismo protocolo BLE GATT
+> y el mismo `InputBackend`, por lo que el HUD no distingue la fuente del input.
+> Ver [app-tech-doc.md](app-tech-doc.md) para el diseño de la app.
 
 ---
 

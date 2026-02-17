@@ -6,7 +6,7 @@
 
 **¿Y si pudieras mirar cualquier dispositivo — tu auto, un monitor médico, un servidor, un sensor — y ver sus datos flotando frente a tu ojo en tiempo real?**
 
-ScouterHUD es un ecosistema open source de tres dispositivos que hacen exactamente eso, por menos de $85 USD.
+ScouterHUD es un ecosistema open source que hace exactamente eso, por menos de $85 USD.
 
 ---
 
@@ -25,14 +25,14 @@ El concepto es simple: cada dispositivo del mundo real tiene un pequeño código
    los signos vitales ◄──────  por WiFi hasta
    del paciente                tu display
    
-   Tocás tu brazalete          El Gauntlet envía
-   para confirmar   ──────────► el comando al HUD
-   una acción                  sin decir nada
+   Tocás la app en tu          La app envía el
+   antebrazo para    ──────────► comando al HUD
+   confirmar                    sin decir nada
 ```
 
 ---
 
-## Los tres dispositivos
+## Los componentes del ecosistema
 
 ### 1. ScouterHUD — Los ojos (~$55 USD)
 
@@ -49,24 +49,37 @@ Se pone como una vincha. La batería en la nuca hace de contrapeso. Es cómodo p
 
 ---
 
-### 2. ScouterGauntlet — Las manos (~$15 USD)
+### 2. ScouterApp — Las manos (gratis)
 
-Un brazalete en el antebrazo con 5 pads táctiles. Inspirado en la computadora de muñeca del Predator.
+Una app para Android/iOS que se monta en el antebrazo con un strap. Es el control remoto principal del ScouterHUD.
 
 **Qué hace:**
 - Permite controlar el HUD sin hablar (ideal para entornos silenciosos o privados)
-- Ingreso de PINs y códigos de seguridad sin decirlos en voz alta
-- Navegación de menús, confirmación, cancelación
-- Escritura de texto mediante combinaciones de toques (como acordes de piano)
+- Ingreso de PINs y códigos de seguridad con teclado numérico
+- Navegación de menús, confirmación, cancelación con D-pad
+- Gestión de dispositivos conectados, configuración del HUD
+- Vibración como feedback háptico
 
 **Cómo se usa:**
-Se lleva en el antebrazo opuesto a la mano dominante. Se opera tocando los pads con la otra mano, sin necesidad de mirar el brazalete — el feedback llega como vibración en la muñeca y visual en el HUD.
+El celular se coloca horizontal (landscape) en el antebrazo con un strap. Se opera con la otra mano. La orientación landscape es natural porque el antebrazo está perpendicular a tu línea de visión cuando lo mirás.
+
+**Accesorio opcional: Tactile Overlay** — Una membrana de silicona/TPU con relieves que se coloca sobre la pantalla del celular, permitiendo ubicar los botones sin mirar. Compatible con guantes médicos (nitrilo). Se imprime en 3D el molde y se castea en silicona.
 
 **¿Por qué no solo voz?** Porque no podés decir un código TOTP en voz alta en una oficina, ni darle instrucciones a un asistente de IA en una sala de hospital silenciosa, ni hablarle a tu dispositivo en un ambiente industrial ruidoso.
 
 ---
 
-### 3. ScouterBridge — El traductor (~$8-15 USD)
+### 3. ScouterGauntlet — Accesorio pro (opcional, ~$15 USD)
+
+Un brazalete con 5 pads táctiles capacitivos, basado en ESP32. Inspirado en la computadora de muñeca del Predator.
+
+**Para quién:** Usuarios que necesitan operación con guantes gruesos (industrial, soldadura), ambientes mojados/IP67, o máxima discreción sin celular.
+
+**Nota:** Para el 90% de los usuarios, la ScouterApp es suficiente. El Gauntlet es para casos extremos.
+
+---
+
+### 4. ScouterBridge — El traductor (~$8-15 USD)
 
 Un pequeño dongle que se conecta a cualquier dispositivo existente y lo hace compatible con el ecosistema.
 
@@ -101,7 +114,7 @@ QR-Link es un protocolo abierto que inventamos para este proyecto. Define cómo 
 
 **Es como Bluetooth pairing, pero visual.** En vez de buscar dispositivos en un menú, simplemente mirás el QR y ya estás conectado.
 
-**Seguridad:** Los datos sensibles (médicos, financieros) están protegidos. El QR te dice que el dispositivo existe, pero para ver sus datos necesitás autenticarte — con un PIN desde el Gauntlet, un token pre-cargado, o certificados digitales según el nivel de seguridad requerido.
+**Seguridad:** Los datos sensibles (médicos, financieros) están protegidos. El QR te dice que el dispositivo existe, pero para ver sus datos necesitás autenticarte — con un PIN desde la app (o el Gauntlet), un token pre-cargado, o certificados digitales según el nivel de seguridad requerido.
 
 ---
 
@@ -121,16 +134,16 @@ QR-Link es un protocolo abierto que inventamos para este proyecto. Define cómo 
 
 ## Números
 
-| | ScouterHUD | ScouterGauntlet | ScouterBridge |
-|---|---|---|---|
-| **Costo** | ~$55 | ~$15 | ~$8-15 |
-| **Procesador** | Raspberry Pi Zero 2W | ESP32-S3 | ESP32-S3 |
-| **Batería** | 5-10 horas | 5-7 días | Alimentado por el dispositivo |
-| **Conexión** | WiFi + BT | BLE → HUD | WiFi → HUD |
-| **Peso** | ~150g | ~30g | ~15-25g |
+| | ScouterHUD | ScouterApp | ScouterBridge | ScouterGauntlet (opcional) |
+|---|---|---|---|---|
+| **Costo** | ~$55 | Gratis (tu celular) | ~$8-15 | ~$15 |
+| **Procesador** | Raspberry Pi Zero 2W | Tu smartphone | ESP32-S3 | ESP32-S3 |
+| **Batería** | 5-10 horas | Tu celular | Alimentado por dispositivo | 5-7 días |
+| **Conexión** | WiFi + BT | BLE/WiFi → HUD | WiFi → HUD | BLE → HUD |
+| **Peso** | ~150g | Tu celular + strap | ~15-25g | ~30g |
 
-**Ecosistema completo: ~$78-85 USD**
-**Solo HUD + Bridge (sin Gauntlet): ~$63-70 USD**
+**Ecosistema estándar (HUD + App + Bridge): ~$63-70 USD**
+**Con Gauntlet opcional: +$15 USD**
 
 ---
 
@@ -144,7 +157,7 @@ Creemos que la mejor forma de que QR-Link se convierta en un estándar es que se
 
 ## Estado actual
 
-El proyecto está en desarrollo activo. El emulador de dispositivos ya funciona (simula 5 tipos de dispositivos publicando datos realistas por MQTT). El siguiente paso es el display emulador en desktop para desarrollar el software sin necesitar el hardware físico, seguido del primer prototipo óptico para validar que la pantalla semitransparente es legible y cómoda.
+El proyecto está en desarrollo activo. El software del HUD está funcional end-to-end en desktop: emulador de 5 dispositivos, 6 layouts especializados, sistema de input, auth PIN, multi-device switching, y 116 unit tests. El siguiente paso es la ScouterApp (PoC con WebSocket) y el primer prototipo óptico cuando llegue el hardware.
 
 ---
 

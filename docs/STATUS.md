@@ -1,6 +1,6 @@
 # ScouterHUD — Estado del Proyecto
 
-**Última actualización:** 2026-02-16
+**Última actualización:** 2026-02-17
 
 ---
 
@@ -23,13 +23,16 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 
 | Gap | Componente | Necesario para | Estado |
 |-----|-----------|----------------|--------|
-| ~~Sistema de input~~ | ~~`software/scouterhud/input/`~~ | ~~Gauntlet, voz, navegación~~ | **Completado** |
-| ~~BLE client (Pi ↔ Gauntlet)~~ | ~~`input/gauntlet_input.py` con bleak~~ | ~~Recibir eventos del Gauntlet~~ | **Stub listo** (necesita HW) |
+| ~~Sistema de input~~ | ~~`software/scouterhud/input/`~~ | ~~App, Gauntlet, voz, navegación~~ | **Completado** |
+| ~~BLE client (Pi ↔ input)~~ | ~~`input/gauntlet_input.py` con bleak~~ | ~~Recibir eventos de App/Gauntlet~~ | **Stub listo** (necesita HW) |
 | ~~PIN/TOTP auth flow~~ | ~~`software/scouterhud/auth/`~~ | ~~QR-Link auth Nivel 1-2~~ | **Completado** |
-| ~~Multi-device switching~~ | ~~Ampliar `ConnectionManager`~~ | ~~Gauntlet swipe entre dispositivos~~ | **Completado** |
+| ~~Multi-device switching~~ | ~~Ampliar `ConnectionManager`~~ | ~~Swipe entre dispositivos~~ | **Completado** |
 | ~~Unit tests~~ | ~~`software/tests/`~~ | ~~Validación automática~~ | **116 tests passing** |
+| **ScouterApp (PoC)** | `app/web/` WebSocket + HTML | **Input principal del ecosistema** | **Próximo paso** |
+| ScouterApp (Flutter) | `app/flutter/` | App nativa Android/iOS | Después del PoC |
+| Tactile overlay | `app/overlay/` STL + molde silicona | Operación a ciegas / con guantes | Después de la app |
 | Voice/AI pipeline | `software/scouterhud/input/voice.py` | Asistente por voz, STT/TTS | Baja (post-MVP) |
-| Gauntlet firmware | `gauntlet/firmware/` (ESP32, PlatformIO) | Hardware del Gauntlet | Cuando llegue el ESP32 |
+| Gauntlet firmware | `gauntlet/firmware/` (ESP32, PlatformIO) | Accesorio opcional (guantes gruesos, IP67) | Baja (opcional) |
 | Bridge firmware | `bridge/firmware/` (ESP32, PlatformIO) | Hardware del Bridge | Cuando llegue el ESP32 |
 | SPI display backend | `display/backend_spi.py` (ST7789) | HUD real en Pi Zero 2W | Cuando llegue el hardware |
 | PiCamera backend | `camera/backend_pi.py` | QR scan en HUD real | Cuando llegue el hardware |
@@ -63,7 +66,17 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 
 **Subtotal ScouterHUD: ~$55-85 USD**
 
-### Hardware necesario (ScouterGauntlet)
+### Hardware necesario (ScouterApp — input principal)
+
+| # | Componente | Para qué | Estimado |
+|---|-----------|----------|----------|
+| 1 | Smartphone (Android/iOS) | El usuario ya tiene uno | $0 |
+| 2 | Strap/muñequera para celular | Montar celular en antebrazo (landscape) | ~$5-10 |
+| 3 | Tactile overlay (opcional) | Membrana silicona con relieves para uso a ciegas/guantes | ~$3-5 (silicona + molde 3D) |
+
+**Subtotal ScouterApp: ~$5-15 USD** (o $0 si solo usas la app sin strap)
+
+### Hardware necesario (ScouterGauntlet — opcional, casos extremos)
 
 | # | Componente | Para qué | Estimado |
 |---|-----------|----------|----------|
@@ -76,7 +89,7 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 | 7 | Cinta de cobre adhesiva | Pads táctiles capacitivos (prototipo) | ~$3 |
 | 8 | Velcro strap 25mm | Correa del brazalete | ~$2 |
 
-**Subtotal ScouterGauntlet: ~$15-20 USD**
+**Subtotal ScouterGauntlet: ~$15-20 USD** (solo para guantes gruesos, IP67, sin celular)
 
 ### Hardware necesario (ScouterBridge — MVP USB Serial)
 
@@ -266,8 +279,40 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 
 ---
 
-## Phase G0 — ScouterGauntlet: Proof of Concept
-**Estado:** Pendiente (esperando hardware)
+## Phase A0 — ScouterApp: PoC WebSocket
+**Estado:** Próximo paso (se puede hacer AHORA, sin hardware)
+
+- [ ] WebSocket server en el HUD (`ws://localhost:8765`)
+- [ ] `PhoneInput` backend que recibe eventos por WebSocket → `InputManager`
+- [ ] Página HTML landscape con D-pad + numpad + device list
+- [ ] Testear: abrir desde browser del celular → tocar botón → HUD responde
+- [ ] Documentar el flujo en STATUS.md
+
+**Criterio de éxito:** Abrir una página web en el celular → tocar un botón → el HUD responde en el preview.
+
+### Phase A1 — ScouterApp: Flutter MVP
+
+- [ ] Flutter app con pantalla de control (D-pad + confirm + cancel)
+- [ ] Pantalla PIN entry (numpad)
+- [ ] Pantalla device list
+- [ ] Comunicación BLE con el HUD
+- [ ] Pairing flow (escanear QR del HUD)
+- [ ] Landscape mode forzado
+
+### Phase A2 — Tactile Overlay
+
+- [ ] Diseño 3D del overlay para 2-3 tamaños de celular
+- [ ] Prototipo con silicona de casteo + molde 3D
+- [ ] Modo calibración en la app
+- [ ] Validar con guantes de nitrilo
+
+---
+
+## Phase G0 — ScouterGauntlet: Proof of Concept (opcional)
+**Estado:** Baja prioridad (accesorio opcional para casos extremos)
+
+> **Nota:** Para el 90% de los usuarios, la ScouterApp es suficiente. El Gauntlet ESP32 es solo para:
+> guantes gruesos (industrial, soldadura), ambientes mojados/IP67, o usuarios sin celular.
 
 - [ ] ESP32-S3 dev board en breadboard
 - [ ] 5 pads de cinta de cobre conectados a touch pins
@@ -275,8 +320,6 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 - [ ] BLE: enviar eventos a un celular (app BLE scanner para validar)
 - [ ] Motor de vibración con MOSFET
 - [ ] Medir consumo en deep sleep vs activo
-
-**Criterio de éxito:** Detectar toques y chords de 2-3 pads con <50ms de latencia y 0 false positives en 100 intentos.
 
 ### Phase G1 — Integración con ScouterHUD
 
@@ -405,7 +448,7 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m scouterhud.main 
 #   x → desconecta y vuelve a scanning
 ```
 
-Nota: para tener múltiples dispositivos en la lista, habría que escanear varios QR o conectar a varios --demo secuencialmente. En el futuro el Gauntlet permitirá navegar la lista con swipe.
+Nota: para tener múltiples dispositivos en la lista, habría que escanear varios QR o conectar a varios --demo secuencialmente. En el futuro la ScouterApp permitirá navegar la lista con swipe.
 
 ### Generar QR codes
 

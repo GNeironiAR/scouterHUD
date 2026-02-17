@@ -24,11 +24,14 @@ monitor                   connects via MQTT        of vision
 
 ## The ecosystem
 
-| Device | What it does | Cost |
-|--------|-------------|------|
+| Component | What it does | Cost |
+|-----------|-------------|------|
 | **ScouterHUD** | Monocular see-through display + camera + AI assistant | ~$55 |
-| **ScouterGauntlet** | Wrist input device with 5 capacitive touch pads (silent PIN entry, navigation) | ~$15 |
+| **ScouterApp** | Phone app mounted on forearm (landscape) — primary input: D-pad, PIN pad, device list | Free |
 | **ScouterBridge** | Dongle that translates legacy devices (USB, OBD-II, Serial, BLE) to QR-Link | ~$8-15 |
+| **ScouterGauntlet** | *(optional)* ESP32 wrist device with capacitive pads — for heavy gloves, IP67, no-phone use | ~$15 |
+
+**Optional accessory: Tactile Overlay** — A silicone/TPU membrane with raised ridges placed over the phone screen. Lets you feel the buttons without looking. Works through medical gloves (nitrile). 3D-printed mold + cast silicone.
 
 <p align="center">
   <img src="docs/Gemini_Generated_Image_l8l5e0l8l5e0l8l5.png" width="280" alt="ScouterGauntlet concept"/>
@@ -45,7 +48,7 @@ qrlink://v1/{device_id}/mqtt/{host}:{port}?auth={auth}&t={topic}
 
 The HUD scans it, connects, fetches metadata from `$meta`, and renders the right layout automatically. It's like Bluetooth pairing, but visual.
 
-**Security levels:** Open (public data) / PIN (entered silently via Gauntlet) / Token / Mutual TLS / Biometric
+**Security levels:** Open (public data) / PIN (entered silently via App or Gauntlet) / Token / Mutual TLS / Biometric
 
 ## Current status
 
@@ -53,12 +56,13 @@ The software is functional and tested end-to-end on desktop:
 
 - **Device Emulator** — 5 simulated IoT devices publishing realistic data via MQTT
 - **ScouterHUD Software** — QR scanning, MQTT transport, 6 device-specific layouts, preview mode
-- **Input System** — Keyboard input with navigation and numeric modes (Gauntlet-ready architecture)
+- **Input System** — Keyboard input with navigation and numeric modes (App/Gauntlet-ready architecture)
 - **PIN Auth** — Interactive PIN entry screen with validation and retry
 - **Multi-device** — Device history with switching (next/prev/list)
 - **State Machine** — SCANNING > AUTH > CONNECTING > STREAMING > DEVICE_LIST > ERROR
+- **116 Unit Tests** — Full coverage of protocol, auth, renderer, input, connection, gauntlet
 
-Hardware prototyping begins when components arrive.
+Next: ScouterApp PoC (WebSocket + HTML control page), then hardware prototyping.
 
 See [docs/STATUS.md](docs/STATUS.md) for detailed progress.
 
@@ -124,36 +128,42 @@ scouterHUD/
 │   └── generate_all_qrs.py     # QR code generator (PNG + PDF)
 │
 ├── software/                    # ScouterHUD main software
-│   └── scouterhud/
-│       ├── main.py              # Entry point + state machine
-│       ├── display/             # Display backends (pygame, preview, SPI)
-│       │   ├── renderer.py      # 6 layouts + status screens + device list
-│       │   └── widgets.py       # Reusable UI components
-│       ├── camera/              # Camera backends (desktop, Pi)
-│       ├── qrlink/              # QR-Link protocol + MQTT transport
-│       ├── input/               # Input system (keyboard, Gauntlet BLE)
-│       └── auth/                # PIN auth flow
+│   ├── scouterhud/
+│   │   ├── main.py              # Entry point + state machine
+│   │   ├── display/             # Display backends (pygame, preview, SPI)
+│   │   │   ├── renderer.py      # 6 layouts + status screens + device list
+│   │   │   └── widgets.py       # Reusable UI components
+│   │   ├── camera/              # Camera backends (desktop, Pi)
+│   │   ├── qrlink/              # QR-Link protocol + MQTT transport
+│   │   ├── input/               # Input system (keyboard, App/Gauntlet BLE)
+│   │   └── auth/                # PIN auth flow
+│   └── tests/                   # 116 unit tests (pytest)
+│
+├── app/                         # (planned) ScouterApp — phone companion
+│   ├── web/                     # PoC: WebSocket + HTML control page
+│   ├── flutter/                 # MVP: Flutter app (Android + iOS)
+│   └── overlay/                 # Tactile overlay 3D models
 │
 ├── docs/                        # Design docs + status
-│   ├── TECH_DESIGN.md
 │   ├── STATUS.md
 │   ├── ecosystem-overview.md
+│   ├── app-tech-doc.md          # ScouterApp design
 │   ├── bridge-tech-doc.md
 │   └── gauntlet-tech-doc.md
 │
-├── gauntlet/                    # (planned) ESP32 firmware + hardware
+├── gauntlet/                    # (optional) ESP32 firmware + hardware
 └── bridge/                      # (planned) ESP32 firmware + hardware
 ```
 
 ## Hardware
 
-| Component | ScouterHUD | ScouterGauntlet | ScouterBridge |
-|-----------|-----------|-----------------|---------------|
-| Processor | Raspberry Pi Zero 2W | ESP32-S3 | ESP32-S3 |
-| Display | 1.3" ST7789 240x240 | — | — |
-| Battery | 18650 3000mAh (5-10 hrs) | LiPo 400mAh (5-7 days) | Device-powered |
-| Connection | WiFi + BT | BLE to HUD | WiFi/MQTT |
-| Weight | ~150g | ~30g | ~15-25g |
+| Component | ScouterHUD | ScouterApp | ScouterBridge | Gauntlet (optional) |
+|-----------|-----------|-----------|---------------|---------------------|
+| Processor | Raspberry Pi Zero 2W | Your phone | ESP32-S3 | ESP32-S3 |
+| Display | 1.3" ST7789 240x240 | Phone screen | — | — |
+| Battery | 18650 3000mAh (5-10 hrs) | Phone battery | Device-powered | LiPo 400mAh (5-7 days) |
+| Connection | WiFi + BT | BLE/WiFi to HUD | WiFi/MQTT | BLE to HUD |
+| Weight | ~150g | Phone + strap | ~15-25g | ~30g |
 
 ## Tech stack
 
@@ -167,11 +177,11 @@ scouterHUD/
 
 ## Documentation
 
-- [Technical Design](docs/TECH_DESIGN.md) — Full architecture, protocol spec, hardware design
 - [Project Status](docs/STATUS.md) — What's done, what's next, how to test
 - [Ecosystem Overview](docs/ecosystem-overview.md) — The vision in plain language
+- [ScouterApp Design](docs/app-tech-doc.md) — Phone companion app + tactile overlay
 - [ScouterBridge Design](docs/bridge-tech-doc.md) — Universal device adapter
-- [ScouterGauntlet Design](docs/gauntlet-tech-doc.md) — Wrist input device
+- [ScouterGauntlet Design](docs/gauntlet-tech-doc.md) — Optional wrist input device (ESP32)
 
 ## Why open source
 
