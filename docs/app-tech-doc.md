@@ -1,13 +1,13 @@
 # ScouterApp — Companion App for ScouterHUD
 
-## Technical Design Document v0.1
+## Technical Design Document v0.2
 
 **Project Codename:** ScouterApp
 **Companion to:** ScouterHUD
 **Author:** Ger
 **Date:** February 2026
 **License:** MIT
-**Status:** Diseño
+**Status:** Phase A0 completado, Phase A1 en progreso (v0.2.0 funcional en Android)
 
 ---
 
@@ -76,48 +76,52 @@ Esto resuelve el caso de uso del Gauntlet ESP32 (operación a ciegas, con guante
 
 ## 2. Pantallas de la app (landscape)
 
-### 2.1 Pantalla principal — Control
+### 2.1 Pantalla principal — Control (implementado v0.2.0)
 
 ```
-┌──────────────────────────────────────────────────┐
-│ ScouterApp                     🔋 HUD: 78%  🟢   │
-│──────────────────────────────────────────────────│
-│                                                   │
-│   ┌──────┐                          ┌──────────┐ │
-│   │  ▲   │                          │          │ │
-│   │      │                          │  CONFIRM │ │
-│   │◄    ►│                          │          │ │
-│   │      │                          └──────────┘ │
-│   │  ▼   │                                       │
-│   └──────┘                          ┌──────────┐ │
-│                                     │  CANCEL  │ │
-│                                     └──────────┘ │
-│──────────────────────────────────────────────────│
-│  [Devices]  [Scan QR]  [PIN Pad]  [Settings]    │
-└──────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ ● CONNECTED            AUTH — monitor-bed-12             │
+│──────────────────────────────────────────────────────────│
+│  PIN ENTRY — Type digits, ⌫ to delete, SEND to submit   │
+│──────────────────────────────────────────────────────────│
+│                                                          │
+│  pad   ┌───┐ ┌───┐ ┌───┐      [CANCEL]  [SCAN QR]  pad │
+│  16px  │ 1 │ │ 2 │ │ 3 │                            48px│
+│        ├───┤ ├───┤ ├───┤      [HOME]    [URL INPUT]     │
+│        │ 4 │ │ 5 │ │ 6 │                                │
+│        ├───┤ ├───┤ ├───┤      [NEXT ▶]  [◀ PREV]        │
+│        │ 7 │ │ 8 │ │ 9 │                                │
+│        ├───┤ ├───┤ ├───┤                                 │
+│        │ ⌫ │ │ 0 │ │SEND│                                │
+│        └───┘ └───┘ └───┘                                 │
+└──────────────────────────────────────────────────────────┘
 ```
 
-Botones grandes, espaciados, operables con el pulgar de la mano contraria.
-
-### 2.2 Pantalla PIN — Teclado numérico
+Layout en modo navegación (sin PIN): el numpad se reemplaza por un D-pad de 5 botones (80x68px).
 
 ```
-┌──────────────────────────────────────────────────┐
-│ PIN for: monitor-bed-12              [Cancel]     │
-│──────────────────────────────────────────────────│
-│                                                   │
-│      ┌─────┐  ┌─────┐  ┌─────┐                  │
-│      │  1  │  │  2  │  │  3  │                  │
-│      ├─────┤  ├─────┤  ├─────┤                  │
-│      │  4  │  │  5  │  │  6  │                  │
-│      ├─────┤  ├─────┤  ├─────┤                  │
-│      │  7  │  │  8  │  │  9  │     [  ⌫  ]      │
-│      ├─────┤  ├─────┤  ├─────┤                  │
-│      │     │  │  0  │  │     │     [SUBMIT]      │
-│      └─────┘  └─────┘  └─────┘                  │
-│                                                   │
-└──────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ ● CONNECTED          STREAMING — car-001                 │
+│──────────────────────────────────────────────────────────│
+│                                                          │
+│  pad         ┌───┐                                   pad │
+│  16px        │ ▲ │           [CANCEL]  [SCAN QR]     48px│
+│        ┌───┐ ┌───┐ ┌───┐                                │
+│        │ ◄ │ │OK │ │ ► │    [HOME]    [URL INPUT]       │
+│        └───┘ └───┘ └───┘                                 │
+│              ┌───┐           [NEXT ▶]  [◀ PREV]          │
+│              │ ▼ │                                        │
+│              └───┘                                        │
+└──────────────────────────────────────────────────────────┘
 ```
+
+Botones grandes, espaciados, operables con el pulgar. Margen derecho de 48px como zona segura para botones físicos del celular (volumen, power).
+
+### 2.2 Pantalla PIN — Teclado numérico (implementado v0.2.0)
+
+El numpad aparece automáticamente cuando el HUD entra en modo PIN. Se integra en la pantalla principal (no es una pantalla separada). Ver layout en 2.1.
+
+Cada tecla envía un evento directo: `digit_0`..`digit_9`, `digit_backspace`, `digit_submit`. El cursor avanza automáticamente al escribir y retrocede con backspace.
 
 ### 2.3 Pantalla dispositivos
 
@@ -165,15 +169,25 @@ Esto significa que:
 - Ambos son un `InputBackend` que produce `InputEvent`
 - El mismo `gauntlet_input.py` (renombrado a `ble_input.py`) sirve para ambos
 
-### 3.2 Alternativa WiFi
+### 3.2 WiFi/WebSocket (implementado)
 
-Para latencia más baja o cuando BLE no está disponible, la app puede comunicarse por WebSocket sobre WiFi local:
+**Implementación actual:** La app se comunica por WebSocket sobre WiFi local:
 
 ```
-App ──WebSocket──► HUD (ws://scouterhud.local:8765)
+App ──WebSocket──► HUD (ws://<hud-ip>:8765)
 ```
 
-Mismo formato de mensajes, diferente transporte. El `InputManager` del HUD maneja ambos.
+Protocolo JSON bidireccional:
+
+```
+App → HUD:  {"type": "input", "event": "nav_up"}
+App → HUD:  {"type": "input", "event": "digit_5"}
+App → HUD:  {"type": "qrlink", "url": "qrlink://v1/..."}
+HUD → App:  {"type": "state", "state": "streaming", "device": "car-001"}
+HUD → App:  {"type": "mode", "numeric": true}
+```
+
+El `PhoneInput` backend traduce los mensajes JSON a `InputEvent` y los inyecta en el `InputManager`.
 
 ### 3.3 Modo relay MQTT
 
@@ -192,16 +206,17 @@ Beneficios adicionales:
 - **Menos hardware** en el HUD — menos peso, menos cables, menos puntos de fallo
 - **HUD = display puro** — entra a cualquier espacio sin restricciones
 
-### 4.2 Flujo de escaneo
+### 4.2 Flujo de escaneo (implementado)
 
 ```
 1. Usuario ve un QR code en un dispositivo
-2. Toca [Scan QR] en la app (o gesto rápido en el Gauntlet)
-3. Se abre la cámara del celular
-4. La app detecta y parsea el QR: qrlink://v1/{id}/mqtt/...
-5. Envía la URL al HUD por BLE o WiFi
-6. El HUD se conecta al dispositivo vía MQTT
-7. Si requiere auth → la app pide biometría (ver sección 5)
+2. Toca [SCAN QR] en la app
+3. Se abre la cámara del celular (mobile_scanner)
+4. La app auto-detecta el QR: qrlink://v1/{id}/mqtt/...
+5. Envía la URL al HUD por WebSocket: {"type": "qrlink", "url": "..."}
+6. El HUD parsea la URL y se conecta al dispositivo vía MQTT
+7. Si requiere auth → HUD entra en modo PIN → app muestra numpad
+   (futuro: biometría reemplazará el PIN manual)
 8. Datos en vivo aparecen en el HUD
 ```
 
@@ -350,9 +365,11 @@ La app tiene un modo de calibración que muestra los botones y el usuario ajusta
 | **Kotlin/Swift nativo** | Separado | Nativo | Máximo control BLE | Doble codebase |
 | **PWA + Web Bluetooth** | Chrome Android | Web Bluetooth API | Sin instalar, solo web | Solo Chrome, no iOS |
 
-**Recomendación:** Flutter para MVP. BLE bien soportado, un solo codebase, buen rendimiento de UI.
+**Decisión: Flutter.** Un solo codebase, BLE bien soportado, buen rendimiento de UI.
 
-**Alternativa rápida para PoC:** PWA con Web Bluetooth — cero instalación, se prueba desde el browser. Limitado a Android/Chrome pero valida el concepto en minutos.
+**PoC completado con PWA:** Web page en `app/web/index.html` servida por el HUD. Sigue activa como fallback cuando no hay APK instalado.
+
+**Stack actual (v0.2.0):** Flutter 3.x, Dart, Provider (state management), mobile_scanner 6.0.11 (QR), web_socket_channel (WebSocket), shared_preferences (persistencia).
 
 ### 7.2 Comunicación
 
@@ -371,25 +388,32 @@ ScouterApp (celular)
 
 ## 8. Roadmap
 
-### Phase A0 — PoC WebSocket (se puede hacer AHORA, sin hardware)
+### Phase A0 — PoC WebSocket
+**Estado: Completado**
 
-- [ ] WebSocket server en el HUD (`ws://localhost:8765`)
-- [ ] `PhoneInput` backend que recibe eventos por WebSocket
-- [ ] HTML page simple con D-pad + numpad (se abre desde el browser del celular)
-- [ ] Integrar `PhoneInput` al `InputManager` existente
-- [ ] Testear con emulador + preview mode
+- [x] WebSocket server en el HUD (`ws://0.0.0.0:8765`)
+- [x] `PhoneInput` backend que recibe eventos por WebSocket → `InputManager`
+- [x] HTML page landscape con D-pad + modo numérico + QR scan + URL input
+- [x] HUD broadcast de estado a phones conectados
+- [x] 47 tests unitarios
 
-**Criterio de éxito:** Abrir una página web en el celular → tocar botón → HUD responde.
+**Criterio de éxito:** Abrir una página web en el celular → tocar botón → HUD responde. **VERIFICADO.**
 
 ### Phase A1 — App Flutter MVP
+**Estado: En progreso — v0.2.0 funcional en Android**
 
-- [ ] Flutter app con pantalla de control (D-pad + confirm + cancel)
-- [ ] QR scanning desde la cámara del celular (reemplaza cámara del HUD)
+- [x] Flutter app con pantalla de control (D-pad + numpad + actions)
+- [x] QR scanning nativo (mobile_scanner 6.0.11)
+- [x] Landscape mode forzado (immersive sticky)
+- [x] WebSocket connection con auto-reconnect
+- [x] Teclado numérico directo para PIN (digit_0..9, backspace, submit)
+- [x] Cambio automático D-pad ↔ Numpad según modo del HUD
+- [x] Status bar, PIN banner, URL input manual
+- [x] 10 tests Flutter
 - [ ] Autenticación biométrica (FaceID/huella) con Keychain/Keystore
-- [ ] Pantalla de device list
-- [ ] Comunicación BLE con el HUD
+- [ ] Pantalla de device list en la app
+- [ ] Comunicación BLE con el HUD (actualmente WiFi/WebSocket)
 - [ ] Pairing flow (escanear QR del HUD)
-- [ ] Landscape mode forzado
 
 ### Phase A2 — Tactile Overlay
 
@@ -432,11 +456,28 @@ Ambos usan el mismo protocolo BLE GATT, el mismo `InputBackend`, los mismos `Inp
 scouterhud/
 ├── ...todo lo del HUD...
 ├── app/
-│   ├── web/                  → PoC WebSocket (HTML + JS)
-│   ├── flutter/              → App Flutter (Android + iOS)
+│   ├── web/
+│   │   └── index.html              → PoC WebSocket (HTML + JS) — fallback
+│   ├── flutter/
+│   │   └── scouter_app/
+│   │       ├── lib/
+│   │       │   ├── main.dart               → Entry point + ConnectScreen
+│   │       │   ├── screens/
+│   │       │   │   ├── control_screen.dart  → D-pad/Numpad + actions
+│   │       │   │   └── qr_scanner_screen.dart → QR scanning
+│   │       │   ├── widgets/
+│   │       │   │   ├── dpad_widget.dart     → D-pad 5 botones
+│   │       │   │   ├── numpad_widget.dart   → Numpad 4x3
+│   │       │   │   └── status_bar_widget.dart → Status bar
+│   │       │   ├── services/
+│   │       │   │   └── websocket_service.dart → WebSocket client
+│   │       │   └── models/
+│   │       │       └── hud_state.dart       → HudConnection state
+│   │       ├── test/                        → 10 widget/unit tests
+│   │       └── android/                     → Android config (Kotlin 2.1.0, etc.)
 │   └── overlay/
-│       ├── 3d-models/        → STL del tactile overlay
-│       └── calibration/      → Guía de alineación
+│       ├── 3d-models/        → STL del tactile overlay (pendiente)
+│       └── calibration/      → Guía de alineación (pendiente)
 ├── gauntlet/                 → (opcional) ESP32 firmware
 └── bridge/                   → ESP32 firmware
 ```

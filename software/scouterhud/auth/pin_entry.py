@@ -48,9 +48,29 @@ class PinEntry:
         """The current PIN as a string."""
         return "".join(str(d) for d in self._digits)
 
+    # Direct digit event types mapped to their integer value
+    _DIRECT_DIGITS = {
+        EventType.DIGIT_0: 0, EventType.DIGIT_1: 1, EventType.DIGIT_2: 2,
+        EventType.DIGIT_3: 3, EventType.DIGIT_4: 4, EventType.DIGIT_5: 5,
+        EventType.DIGIT_6: 6, EventType.DIGIT_7: 7, EventType.DIGIT_8: 8,
+        EventType.DIGIT_9: 9,
+    }
+
     def handle_event(self, event: InputEvent) -> None:
         """Process an input event. Called from the app main loop."""
-        if event.type in (EventType.DIGIT_UP, EventType.NAV_UP):
+        # Direct digit entry (phone numpad)
+        if event.type in self._DIRECT_DIGITS:
+            self._digits[self._cursor] = self._DIRECT_DIGITS[event.type]
+            self._cursor = min(self._cursor + 1, self.pin_length - 1)
+            self._error_msg = ""
+
+        elif event.type == EventType.DIGIT_BACKSPACE:
+            self._digits[self._cursor] = 0
+            self._cursor = max(self._cursor - 1, 0)
+            self._error_msg = ""
+
+        # Rotary digit entry (Gauntlet/keyboard +/-)
+        elif event.type in (EventType.DIGIT_UP, EventType.NAV_UP):
             self._digits[self._cursor] = (self._digits[self._cursor] + 1) % 10
             self._error_msg = ""
 

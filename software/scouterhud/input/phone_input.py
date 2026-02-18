@@ -36,6 +36,17 @@ _EVENT_MAP: dict[str, EventType] = {
     "digit_next": EventType.DIGIT_NEXT,
     "digit_prev": EventType.DIGIT_PREV,
     "digit_submit": EventType.DIGIT_SUBMIT,
+    "digit_0": EventType.DIGIT_0,
+    "digit_1": EventType.DIGIT_1,
+    "digit_2": EventType.DIGIT_2,
+    "digit_3": EventType.DIGIT_3,
+    "digit_4": EventType.DIGIT_4,
+    "digit_5": EventType.DIGIT_5,
+    "digit_6": EventType.DIGIT_6,
+    "digit_7": EventType.DIGIT_7,
+    "digit_8": EventType.DIGIT_8,
+    "digit_9": EventType.DIGIT_9,
+    "digit_backspace": EventType.DIGIT_BACKSPACE,
     "next_device": EventType.NEXT_DEVICE,
     "prev_device": EventType.PREV_DEVICE,
     "scan_qr": EventType.SCAN_QR,
@@ -244,7 +255,10 @@ class PhoneInput(InputBackend):
             event_name = data.get("event", "")
             etype = _EVENT_MAP.get(event_name)
             if etype:
+                log.debug(f"Phone input: {event_name} → {etype.name}")
                 return InputEvent(type=etype, source="phone")
+            else:
+                log.warning(f"Phone input: unknown event '{event_name}'")
 
         elif msg_type == "qrlink":
             url = data.get("url", "")

@@ -20,12 +20,25 @@ class EventType(Enum):
     CANCEL = auto()
     HOME = auto()
 
-    # PIN/numeric entry
+    # PIN/numeric entry (rotary style — Gauntlet/keyboard)
     DIGIT_UP = auto()      # increment current digit
     DIGIT_DOWN = auto()    # decrement current digit
     DIGIT_NEXT = auto()    # move to next digit
     DIGIT_PREV = auto()    # move to previous digit
     DIGIT_SUBMIT = auto()  # submit full number
+
+    # PIN/numeric entry (direct keypad — phone app)
+    DIGIT_0 = auto()
+    DIGIT_1 = auto()
+    DIGIT_2 = auto()
+    DIGIT_3 = auto()
+    DIGIT_4 = auto()
+    DIGIT_5 = auto()
+    DIGIT_6 = auto()
+    DIGIT_7 = auto()
+    DIGIT_8 = auto()
+    DIGIT_9 = auto()
+    DIGIT_BACKSPACE = auto()
 
     # Device management
     NEXT_DEVICE = auto()

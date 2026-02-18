@@ -365,6 +365,9 @@ class ScouterHUD:
             if data and self.connection.active_device:
                 frame = render_frame(self.connection.active_device, data)
                 self.display.show(frame)
+            elif self.connection.active_device:
+                device_id = self.connection.active_device.id
+                self.display.show(render_connecting_screen(device_id))
 
         elif self._state == AppState.DEVICE_LIST:
             active_id = self.connection.active_device.id if self.connection.active_device else ""
