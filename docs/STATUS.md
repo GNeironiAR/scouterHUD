@@ -28,7 +28,7 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 | ~~PIN/TOTP auth flow~~ | ~~`software/scouterhud/auth/`~~ | ~~QR-Link auth Nivel 1-2~~ | **Completado** |
 | ~~Multi-device switching~~ | ~~Ampliar `ConnectionManager`~~ | ~~Swipe entre dispositivos~~ | **Completado** |
 | ~~Unit tests~~ | ~~`software/tests/`~~ | ~~Validación automática~~ | **116 tests passing** |
-| **ScouterApp (PoC)** | `app/web/` WebSocket + HTML | **Input principal del ecosistema** | **Próximo paso** |
+| ~~ScouterApp (PoC)~~ | ~~`app/web/` WebSocket + HTML~~ | ~~Input principal del ecosistema~~ | **Completado** |
 | ScouterApp (Flutter) | `app/flutter/` | App nativa Android/iOS | Después del PoC |
 | Tactile overlay | `app/overlay/` STL + molde silicona | Operación a ciegas / con guantes | Después de la app |
 | Voice/AI pipeline | `software/scouterhud/input/voice.py` | Asistente por voz, STT/TTS | Baja (post-MVP) |
@@ -36,7 +36,7 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 | Bridge firmware | `bridge/firmware/` (ESP32, PlatformIO) | Hardware del Bridge | Cuando llegue el ESP32 |
 | SPI display backend | `display/backend_spi.py` (ST7789) | HUD real en Pi Zero 2W | Cuando llegue el hardware |
 | PiCamera backend | `camera/backend_pi.py` | QR scan en HUD (opcional, ver [camera-tech-doc](camera-tech-doc.md)) | Baja (opcional — privacidad) |
-| **QR scan desde App** | `app/` + `PhoneInput` | **QR scanning principal** (cámara del celular) | **Incluido en Phase A0/A1** |
+| ~~QR scan desde App~~ | ~~`app/` + `PhoneInput`~~ | ~~QR scanning principal (cámara del celular)~~ | **Completado (Phase A0)** |
 | **Auth biométrica** | `app/` | FaceID/huella reemplaza PIN/TOTP manual | **Incluido en Phase A1** |
 
 ---
@@ -153,14 +153,14 @@ Software principal del ScouterHUD con display emulado en desktop.
 | `software/scouterhud/qrlink/protocol.py` | Parser URL compacta `qrlink://v1/...` + DeviceLink dataclass | Listo |
 | `software/scouterhud/qrlink/transports/mqtt.py` | MQTTTransport: connect, fetch $meta, subscribe data stream | Listo |
 | `software/scouterhud/qrlink/connection.py` | ConnectionManager: multi-device history + switching | Listo |
-| `software/scouterhud/main.py` | Entry point CLI con state machine: --scan, --demo, --preview, --auth | Listo |
+| `software/scouterhud/main.py` | Entry point CLI con state machine: --scan, --demo, --preview, --auth, --phone | Listo |
 
 ### Sistema de Input
 **Estado:** Completado
 
 | Archivo | Descripción | Estado |
 |---------|-------------|--------|
-| `software/scouterhud/input/events.py` | EventType enum (18 tipos) + InputEvent dataclass | Listo |
+| `software/scouterhud/input/events.py` | EventType enum (19 tipos) + InputEvent dataclass | Listo |
 | `software/scouterhud/input/backend.py` | ABC InputBackend (start, stop, poll) | Listo |
 | `software/scouterhud/input/keyboard_input.py` | KeyboardInput (pygame) + StdinKeyboardInput (preview/wasd) | Listo |
 | `software/scouterhud/input/input_manager.py` | InputManager: poll N backends, toggle modo numérico | Listo |
@@ -232,7 +232,7 @@ Software principal del ScouterHUD con display emulado en desktop.
 ### Unit Tests
 **Estado:** Completado
 
-116 tests cubriendo todos los módulos core. Corren en <0.3s sin hardware ni broker.
+163 tests cubriendo todos los módulos core. Corren en <0.3s sin hardware ni broker.
 
 ```bash
 cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
@@ -246,6 +246,7 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 | `tests/test_input.py` | 13 | EventType, InputEvent, InputManager con mock backends |
 | `tests/test_connection.py` | 11 | Device history, switching, dedup, mock MQTT transport |
 | `tests/test_gauntlet.py` | 21 | Pad→event translation (nav + numeric), BLE notification parser, battery |
+| `tests/test_phone_input.py` | 47 | PhoneInput: message parsing, event map, queue, state broadcast |
 
 ### BLE Gauntlet Input Stub
 **Estado:** Completado (stub — necesita hardware ESP32 para test real)
@@ -283,16 +284,54 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 ---
 
 ## Phase A0 — ScouterApp: PoC WebSocket
-**Estado:** Próximo paso (se puede hacer AHORA, sin hardware)
+**Estado:** Completado
 
-- [ ] WebSocket server en el HUD (`ws://localhost:8765`)
-- [ ] `PhoneInput` backend que recibe eventos por WebSocket → `InputManager`
-- [ ] Página HTML landscape con D-pad + numpad + device list
-- [ ] **QR scanning desde la página web** (Web API `getUserMedia` + jsQR)
-- [ ] Testear: abrir desde browser del celular → escanear QR → HUD se conecta
-- [ ] Documentar el flujo en STATUS.md
+- [x] WebSocket server en el HUD (`ws://localhost:8765`)
+- [x] `PhoneInput` backend que recibe eventos por WebSocket → `InputManager`
+- [x] Página HTML landscape con D-pad + modo numérico (PIN entry)
+- [x] QR scanning desde la página web (BarcodeDetector API + input manual de URL)
+- [x] Testear: abrir desde browser del celular → enviar qrlink URL → HUD se conecta
+- [x] HUD broadcast de estado a phones conectados (SCANNING/AUTH/STREAMING/ERROR)
+- [x] 47 tests nuevos (163 total)
+- [x] Documentado en STATUS.md
 
-**Criterio de éxito:** Abrir una página web en el celular → escanear un QR con la cámara del celular → el HUD se conecta y muestra datos.
+**Criterio de éxito:** Abrir una página web en el celular → enviar una QR-Link URL → el HUD se conecta y muestra datos. **VERIFICADO.**
+
+| Archivo | Descripción | Estado |
+|---------|-------------|--------|
+| `software/scouterhud/input/phone_input.py` | PhoneInput backend: WebSocket server + HTTP serving de HTML | Listo |
+| `app/web/index.html` | Página de control mobile: D-pad, modo PIN, QR scan, URL input, status bar | Listo |
+| `software/tests/test_phone_input.py` | 47 tests: parsing, event map, queue, state broadcast | Listo |
+
+### Cómo correr con control por celular
+
+```bash
+# Terminal 1: MQTT broker
+docker run --rm -p 1883:1883 eclipse-mosquitto:2 mosquitto -c /mosquitto-no-auth.conf
+
+# Terminal 2: Emulador de dispositivos
+cd ~/scouterHUD/emulator && ../.venv/bin/python emulator.py
+
+# Terminal 3: HUD con phone control
+cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m scouterhud.main --preview --phone
+
+# Ver pantalla del Scouter
+code /tmp/scouterhud_live.png
+
+# Abrir control remoto en browser
+# http://localhost:8765/        (mismo PC)
+# http://<tu-ip>:8765/          (celular en misma WiFi)
+```
+
+### QR-Link URLs para probar desde el celular
+
+| Dispositivo | URL | Auth |
+|---|---|---|
+| Auto OBD-II | `qrlink://v1/car-001/mqtt/localhost:1883?t=vehicles/car001/obd2` | open |
+| Termostato | `qrlink://v1/thermo-kitchen/mqtt/localhost:1883?t=home/kitchen/climate` | open |
+| Monitor respiratorio | `qrlink://v1/monitor-bed-12/mqtt/localhost:1883?auth=pin&t=ward3/bed12/vitals` | PIN: 1234 |
+| Prensa industrial | `qrlink://v1/press-machine-07/mqtt/localhost:1883?auth=pin&t=factory/zone2/press07` | PIN: 5678 |
+| Servidor AWS | `qrlink://v1/srv-prod-01/mqtt/localhost:1883?auth=token&t=infra/prod/server01` | token |
 
 ### Phase A1 — ScouterApp: Flutter MVP
 
@@ -359,7 +398,7 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 | Python | 3.12 (venv en `.venv/`) |
 | OS | Linux (WSL2) |
 | Deps emulador | paho-mqtt 2.1, pyyaml 6.0, qrcode 8.2, reportlab 4.4, Pillow 12.1 |
-| Deps software | pygame 2.x, pyzbar 0.1, paho-mqtt 2.1, Pillow 12.1 |
+| Deps software | pygame 2.x, pyzbar 0.1, paho-mqtt 2.1, Pillow 12.1, websockets 16.0 |
 | Deps dev | pytest 9.x (`pip install -e ".[dev]"`) |
 | Deps futuras | bleak (BLE), st7789 (SPI display), picamera2 (solo con módulo de cámara opcional) |
 | Dep sistema | `libzbar0` (`sudo apt install libzbar0`), Docker |
@@ -406,11 +445,21 @@ cd ~/scouterHUD/emulator && ../.venv/bin/python emulator.py --device monitor-bed
 ### Terminal 3 — ScouterHUD (preview en WSL2)
 
 ```bash
+# Opción A: Demo directo (teclado)
 cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m scouterhud.main \
     --preview --demo monitor-bed-12 --broker localhost:1883 --topic ward3/bed12/vitals
+
+# Opción B: Phone control (celular como control remoto)
+cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m scouterhud.main --preview --phone
+
+# Opción C: Demo + phone (ambos controles)
+cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m scouterhud.main \
+    --preview --phone --demo monitor-bed-12 --broker localhost:1883 --topic ward3/bed12/vitals
 ```
 
-Luego abrir `/tmp/scouterhud_live.png` en VSCode para ver el HUD en vivo.
+Luego abrir `/tmp/scouterhud_live.png` en VSCode para ver el HUD en vivo (`code /tmp/scouterhud_live.png`).
+
+Para phone control, abrir `http://localhost:8765/` (o `http://<tu-ip>:8765/` desde celular en la misma WiFi).
 
 **Controles en terminal (modo preview):** `w/a/s/d` = navegar, `enter` = confirmar, `x` = cancelar, `h` = lista de dispositivos, `n/p` = cambiar dispositivo, `q` = salir.
 
