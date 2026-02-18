@@ -31,6 +31,7 @@ class EventType(Enum):
     NEXT_DEVICE = auto()
     PREV_DEVICE = auto()
     SCAN_QR = auto()
+    QRLINK_RECEIVED = auto()  # QR-Link URL received from phone app
 
     # System
     TOGGLE_VOICE = auto()

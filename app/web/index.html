@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ScouterApp</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111;
+    color: #0f0;
+    font-family: 'Courier New', monospace;
+    height: 100vh;
+    overflow: hidden;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ── Status bar ── */
+  #status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    font-size: 13px;
+  }
+
+  #status-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #f00;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  #status-dot.connected { background: #0f0; }
+
+  #hud-state {
+    color: #0a0;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  /* ── Main layout ── */
+  #main {
+    display: flex;
+    height: calc(100vh - 34px);
+    gap: 8px;
+    padding: 8px;
+  }
+
+  /* ── D-pad area ── */
+  #dpad-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .dpad-row {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+  }
+
+  .btn {
+    background: #1a1a1a;
+    border: 2px solid #0a0;
+    color: #0f0;
+    border-radius: 8px;
+    font-size: 20px;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn:active, .btn.pressed {
+    background: #0a0;
+    color: #111;
+  }
+
+  .btn-arrow {
+    width: 64px;
+    height: 56px;
+  }
+
+  .btn-spacer {
+    width: 64px;
+    height: 56px;
+    visibility: hidden;
+  }
+
+  /* ── Action buttons ── */
+  #action-area {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    min-width: 100px;
+  }
+
+  .btn-action {
+    width: 100px;
+    height: 56px;
+    font-size: 14px;
+    font-weight: bold;
+  }
+
+  .btn-confirm {
+    border-color: #0f0;
+    color: #0f0;
+    font-size: 16px;
+  }
+
+  .btn-cancel {
+    border-color: #f44;
+    color: #f44;
+  }
+
+  .btn-home {
+    border-color: #48f;
+    color: #48f;
+    height: 40px;
+    font-size: 12px;
+  }
+
+  .btn-small {
+    border-color: #888;
+    color: #888;
+    height: 36px;
+    font-size: 11px;
+  }
+
+  /* ── QR / tools area ── */
+  #tools-area {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    min-width: 120px;
+  }
+
+  .btn-tool {
+    width: 120px;
+    height: 48px;
+    font-size: 12px;
+  }
+
+  .btn-scan {
+    border-color: #ff0;
+    color: #ff0;
+  }
+
+  /* ── QR input panel (hidden by default) ── */
+  #qr-panel {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.95);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  #qr-panel.visible { display: flex; }
+
+  #qr-panel h2 {
+    color: #ff0;
+    font-size: 18px;
+  }
+
+  #url-input {
+    width: 90%;
+    max-width: 500px;
+    padding: 10px;
+    background: #222;
+    border: 2px solid #0a0;
+    color: #0f0;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    border-radius: 6px;
+  }
+
+  #url-input::placeholder { color: #555; }
+
+  .btn-panel {
+    width: 200px;
+    height: 48px;
+    font-size: 14px;
+  }
+
+  #qr-result {
+    color: #0f0;
+    font-size: 12px;
+    max-width: 90%;
+    word-break: break-all;
+    text-align: center;
+    min-height: 20px;
+  }
+
+  #qr-capture { display: none; }
+
+  /* ── Numeric mode labels ── */
+  .label-nav { display: inline; }
+  .label-num { display: none; }
+  body.numeric-mode .label-nav { display: none; }
+  body.numeric-mode .label-num { display: inline; }
+  body.numeric-mode .btn-arrow { border-color: #ff0; color: #ff0; }
+  body.numeric-mode .btn-confirm { border-color: #ff0; }
+
+  /* ── PIN mode banner ── */
+  #pin-banner {
+    display: none;
+    background: #330;
+    border-bottom: 1px solid #ff0;
+    color: #ff0;
+    text-align: center;
+    padding: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 2px;
+  }
+  body.numeric-mode #pin-banner { display: block; }
+
+  /* ── Landscape hint for portrait ── */
+  @media (orientation: portrait) {
+    #rotate-hint {
+      display: flex !important;
+    }
+    #main { display: none !important; }
+  }
+
+  #rotate-hint {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #111;
+    color: #0a0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    gap: 16px;
+    z-index: 200;
+  }
+
+  #rotate-hint .icon { font-size: 48px; }
+</style>
+</head>
+<body>
+
+<!-- Rotation hint -->
+<div id="rotate-hint">
+  <div class="icon">&#x1F4F1;&#x21BB;</div>
+  <div>Rotate to landscape</div>
+  <div style="font-size:12px;color:#555">ScouterApp works in landscape mode</div>
+</div>
+
+<!-- Status bar -->
+<div id="status-bar">
+  <div>
+    <span id="status-dot"></span>
+    <span id="status-text">DISCONNECTED</span>
+  </div>
+  <div id="hud-state">—</div>
+</div>
+
+<!-- PIN mode banner -->
+<div id="pin-banner">PIN ENTRY — Use +/- to change digit, arrows to move, SEND to submit</div>
+
+<!-- Main content -->
+<div id="main">
+
+  <!-- D-Pad -->
+  <div id="dpad-area">
+    <div class="dpad-row">
+      <div class="btn-spacer"></div>
+      <button class="btn btn-arrow" data-event="nav_up" data-num="digit_up">
+        <span class="label-nav">&#x25B2;</span>
+        <span class="label-num">+</span>
+      </button>
+      <div class="btn-spacer"></div>
+    </div>
+    <div class="dpad-row">
+      <button class="btn btn-arrow" data-event="nav_left" data-num="digit_prev">
+        <span class="label-nav">&#x25C0;</span>
+        <span class="label-num">&#x25C0;</span>
+      </button>
+      <button class="btn btn-arrow btn-confirm" data-event="confirm" data-num="digit_submit"
+              style="border-color:#0f0">
+        <span class="label-nav">OK</span>
+        <span class="label-num">SEND</span>
+      </button>
+      <button class="btn btn-arrow" data-event="nav_right" data-num="digit_next">
+        <span class="label-nav">&#x25B6;</span>
+        <span class="label-num">&#x25B6;</span>
+      </button>
+    </div>
+    <div class="dpad-row">
+      <div class="btn-spacer"></div>
+      <button class="btn btn-arrow" data-event="nav_down" data-num="digit_down">
+        <span class="label-nav">&#x25BC;</span>
+        <span class="label-num">&minus;</span>
+      </button>
+      <div class="btn-spacer"></div>
+    </div>
+  </div>
+
+  <!-- Action buttons -->
+  <div id="action-area">
+    <button class="btn btn-action btn-cancel" data-event="cancel">CANCEL</button>
+    <button class="btn btn-action btn-home" data-event="home">HOME</button>
+    <button class="btn btn-action btn-small" data-event="next_device">NEXT &#x25B6;</button>
+    <button class="btn btn-action btn-small" data-event="prev_device">&#x25C0; PREV</button>
+  </div>
+
+  <!-- Tools -->
+  <div id="tools-area">
+    <button class="btn btn-tool btn-scan" onclick="openQRPanel()">SCAN QR</button>
+    <button class="btn btn-tool" style="border-color:#f80;color:#f80"
+            onclick="openQRPanel()">URL INPUT</button>
+  </div>
+
+</div>
+
+<!-- QR / URL input panel -->
+<div id="qr-panel">
+  <h2>&#x1F4F7; Scan QR or Enter URL</h2>
+  <button class="btn btn-panel btn-scan" onclick="captureQR()">
+    &#x1F4F7; TAKE PHOTO
+  </button>
+  <input type="file" id="qr-capture" accept="image/*" capture="environment">
+  <div style="color:#555;font-size:12px">— or paste URL below —</div>
+  <input type="text" id="url-input" placeholder="qrlink://v1/device-id/mqtt/host:port?...">
+  <button class="btn btn-panel" style="border-color:#0f0;color:#0f0" onclick="sendURL()">
+    SEND URL
+  </button>
+  <div id="qr-result"></div>
+  <button class="btn btn-panel" style="border-color:#f44;color:#f44;height:36px;font-size:12px"
+          onclick="closeQRPanel()">CLOSE</button>
+</div>
+
+<canvas id="qr-canvas" style="display:none"></canvas>
+
+<script>
+// ── WebSocket connection ──
+let ws = null;
+let reconnectTimer = null;
+let numericMode = false;
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}`);
+
+  ws.onopen = () => {
+    document.getElementById('status-dot').className = 'connected';
+    document.getElementById('status-text').textContent = 'CONNECTED';
+    clearTimeout(reconnectTimer);
+  };
+
+  ws.onclose = () => {
+    document.getElementById('status-dot').className = '';
+    document.getElementById('status-text').textContent = 'DISCONNECTED';
+    ws = null;
+    scheduleReconnect();
+  };
+
+  ws.onerror = () => {};
+
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      handleServerMessage(msg);
+    } catch (err) {}
+  };
+}
+
+function scheduleReconnect() {
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(connect, 2000);
+}
+
+function handleServerMessage(msg) {
+  if (msg.type === 'state') {
+    const el = document.getElementById('hud-state');
+    let text = msg.state.toUpperCase();
+    if (msg.device) text += ' — ' + msg.device;
+    el.textContent = text;
+  } else if (msg.type === 'mode') {
+    numericMode = !!msg.numeric;
+    document.body.classList.toggle('numeric-mode', numericMode);
+  }
+}
+
+function send(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(obj));
+  }
+}
+
+// ── Button handling ──
+function sendEvent(eventName) {
+  send({ type: 'input', event: eventName });
+}
+
+// Bind all buttons with data-event
+document.querySelectorAll('[data-event]').forEach(btn => {
+  function handlePress(e) {
+    e.preventDefault();
+    // In numeric mode, use data-num if available
+    const eventName = (numericMode && btn.dataset.num)
+      ? btn.dataset.num
+      : btn.dataset.event;
+    sendEvent(eventName);
+    btn.classList.add('pressed');
+    setTimeout(() => btn.classList.remove('pressed'), 150);
+  }
+
+  btn.addEventListener('touchstart', handlePress, { passive: false });
+  btn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    handlePress(e);
+  });
+});
+
+// ── QR Panel ──
+function openQRPanel() {
+  document.getElementById('qr-panel').classList.add('visible');
+  document.getElementById('qr-result').textContent = '';
+}
+
+function closeQRPanel() {
+  document.getElementById('qr-panel').classList.remove('visible');
+}
+
+function captureQR() {
+  document.getElementById('qr-capture').click();
+}
+
+function sendURL() {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) return;
+  if (url.startsWith('qrlink://')) {
+    send({ type: 'qrlink', url: url });
+    document.getElementById('qr-result').textContent = 'Sent: ' + url;
+    document.getElementById('url-input').value = '';
+    setTimeout(closeQRPanel, 1000);
+  } else {
+    document.getElementById('qr-result').textContent = 'URL must start with qrlink://';
+    document.getElementById('qr-result').style.color = '#f44';
+    setTimeout(() => {
+      document.getElementById('qr-result').style.color = '#0f0';
+    }, 2000);
+  }
+}
+
+// Submit URL on Enter key
+document.getElementById('url-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendURL();
+});
+
+// ── QR decoding from captured photo ──
+document.getElementById('qr-capture').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const resultEl = document.getElementById('qr-result');
+  resultEl.textContent = 'Decoding...';
+  resultEl.style.color = '#ff0';
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.getElementById('qr-canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0);
+
+    let decoded = null;
+
+    // Try BarcodeDetector API first (Chrome Android)
+    if ('BarcodeDetector' in window) {
+      try {
+        const detector = new BarcodeDetector({ formats: ['qr_code'] });
+        const results = await detector.detect(bitmap);
+        if (results.length > 0) {
+          decoded = results[0].rawValue;
+        }
+      } catch (err) {}
+    }
+
+    // Fallback: try with ImageData + simple pattern matching
+    if (!decoded) {
+      // No jsQR embedded for PoC — show manual entry message
+      resultEl.textContent = 'Auto-decode not available. Paste the URL manually.';
+      resultEl.style.color = '#f80';
+      return;
+    }
+
+    if (decoded && decoded.startsWith('qrlink://')) {
+      send({ type: 'qrlink', url: decoded });
+      resultEl.textContent = 'QR decoded! Sent: ' + decoded;
+      resultEl.style.color = '#0f0';
+      setTimeout(closeQRPanel, 1500);
+    } else if (decoded) {
+      resultEl.textContent = 'QR found but not a qrlink URL: ' + decoded;
+      resultEl.style.color = '#f80';
+    } else {
+      resultEl.textContent = 'No QR code found in photo. Try again or paste URL.';
+      resultEl.style.color = '#f44';
+    }
+  } catch (err) {
+    resultEl.textContent = 'Error processing image: ' + err.message;
+    resultEl.style.color = '#f44';
+  }
+
+  // Reset file input so same file can be re-selected
+  e.target.value = '';
+});
+
+// ── Init ──
+connect();
+</script>
+</body>
+</html>

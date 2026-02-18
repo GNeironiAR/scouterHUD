@@ -12,6 +12,7 @@ App state machine:
 Modes:
   --scan <qr_image>    Scan a QR image file, connect to device, show live data
   --demo <device_id>   Connect directly to an emulated device (no QR scan needed)
+  --phone [PORT]       Start WebSocket server for phone control (default: 8765)
 
 Display:
   --preview            Use PNG file backend (for WSL2 / headless)
@@ -19,6 +20,8 @@ Display:
 
 Usage:
     python -m scouterhud.main --preview --demo monitor-bed-12 --broker localhost:1883 --topic ward3/bed12/vitals
+    python -m scouterhud.main --preview --phone
+    python -m scouterhud.main --preview --phone --demo monitor-bed-12 --broker localhost:1883 --topic ward3/bed12/vitals
 """
 
 import argparse
@@ -68,7 +71,7 @@ class AppState(Enum):
 class ScouterHUD:
     """Main application controller with state machine."""
 
-    def __init__(self, use_preview: bool = False):
+    def __init__(self, use_preview: bool = False, phone_port: int | None = None):
         # Display
         if use_preview:
             self.display: DisplayBackend = PreviewBackend()
@@ -81,6 +84,14 @@ class ScouterHUD:
             self.input.add_backend(StdinKeyboardInput())
         else:
             self.input.add_backend(KeyboardInput())
+
+        # Phone input (optional WebSocket server)
+        self._phone_input = None
+        if phone_port is not None:
+            from scouterhud.input.phone_input import PhoneInput
+
+            self._phone_input = PhoneInput(port=phone_port)
+            self.input.add_backend(self._phone_input)
 
         # Core systems
         self.connection = ConnectionManager()
@@ -106,7 +117,7 @@ class ScouterHUD:
     def run_scan(self, qr_image_path: str) -> None:
         """Scan a QR image file, connect, and show live data."""
         log.info(f"Scanning QR from: {qr_image_path}")
-        self._state = AppState.SCANNING
+        self._set_state(AppState.SCANNING)
         self.display.show(render_scanning_screen())
 
         camera = DesktopCameraBackend(qr_image_path=qr_image_path)
@@ -153,7 +164,24 @@ class ScouterHUD:
         self._initiate_connection(link)
         self._run_loop()
 
+    def run_phone(self) -> None:
+        """Start in SCANNING state, wait for phone to send QR-Link URL."""
+        log.info("Waiting for phone connection...")
+        self._set_state(AppState.SCANNING)
+        self._run_loop()
+
     # ── Connection flow ──
+
+    def _set_state(self, new_state: AppState) -> None:
+        """Transition to a new state and notify connected phones."""
+        self._state = new_state
+        if self._phone_input:
+            kwargs: dict[str, Any] = {}
+            if new_state == AppState.STREAMING and self.connection.active_device:
+                kwargs["device"] = self.connection.active_device.id
+            elif new_state == AppState.ERROR:
+                kwargs["error"] = self._error_msg
+            self._phone_input.send_state(new_state.name.lower(), **kwargs)
 
     def _initiate_connection(self, link: DeviceLink) -> None:
         """Start connection flow: check auth, then connect."""
@@ -163,7 +191,7 @@ class ScouterHUD:
                 pin_length=4,
                 device_name=link.name or link.id,
             )
-            self._state = AppState.AUTH
+            self._set_state(AppState.AUTH)
             self.input.set_numeric_mode(True)
             log.info(f"Auth required for {link.id} (type: {link.auth})")
         else:
@@ -171,7 +199,7 @@ class ScouterHUD:
 
     def _do_connect(self, link: DeviceLink) -> None:
         """Actually connect to the device."""
-        self._state = AppState.CONNECTING
+        self._set_state(AppState.CONNECTING)
         self.display.show(render_connecting_screen(link.id))
 
         success = self.connection.connect(
@@ -181,7 +209,7 @@ class ScouterHUD:
         )
 
         if success:
-            self._state = AppState.STREAMING
+            self._set_state(AppState.STREAMING)
             self._latest_data = None
             log.info(f"Connected! Streaming data from {link.id}")
         else:
@@ -224,6 +252,7 @@ class ScouterHUD:
             return
 
         handler = {
+            AppState.SCANNING: self._handle_scanning_event,
             AppState.AUTH: self._handle_auth_event,
             AppState.STREAMING: self._handle_streaming_event,
             AppState.DEVICE_LIST: self._handle_device_list_event,
@@ -232,6 +261,17 @@ class ScouterHUD:
 
         if handler:
             handler(event)
+
+    def _handle_scanning_event(self, event) -> None:
+        """Handle events while waiting for QR scan (phone mode)."""
+        if event.type == EventType.QRLINK_RECEIVED:
+            url = event.value
+            link = parse_qrlink_url(url)
+            if link:
+                log.info(f"QR-Link received from {event.source}: {link.id}")
+                self._initiate_connection(link)
+            else:
+                self._show_error("Invalid QR-Link URL", AppState.SCANNING)
 
     def _handle_auth_event(self, event) -> None:
         """Handle events during PIN entry."""
@@ -244,7 +284,7 @@ class ScouterHUD:
             self.input.set_numeric_mode(False)
             self._pin_entry = None
             self._pending_link = None
-            self._state = AppState.SCANNING
+            self._set_state(AppState.SCANNING)
             log.info("PIN entry cancelled")
 
         elif self._pin_entry.is_done:
@@ -275,11 +315,11 @@ class ScouterHUD:
         elif event.type == EventType.HOME:
             if self.connection.device_count > 0:
                 self._device_list_index = 0
-                self._state = AppState.DEVICE_LIST
+                self._set_state(AppState.DEVICE_LIST)
 
         elif event.type == EventType.CANCEL:
             self.connection.disconnect()
-            self._state = AppState.SCANNING
+            self._set_state(AppState.SCANNING)
 
     def _handle_device_list_event(self, event) -> None:
         """Handle events in device list screen."""
@@ -297,12 +337,12 @@ class ScouterHUD:
                 self._initiate_connection(selected)
 
         elif event.type == EventType.CANCEL:
-            self._state = AppState.STREAMING
+            self._set_state(AppState.STREAMING)
 
     def _handle_error_event(self, event) -> None:
         """Any key press on error screen returns to previous state."""
         if event.type in (EventType.CONFIRM, EventType.CANCEL):
-            self._state = self._error_return_state
+            self._set_state(self._error_return_state)
 
     # ── Rendering ──
 
@@ -350,7 +390,7 @@ class ScouterHUD:
     def _show_error(self, msg: str, return_state: AppState) -> None:
         self._error_msg = msg
         self._error_return_state = return_state
-        self._state = AppState.ERROR
+        self._set_state(AppState.ERROR)
         log.error(msg)
 
 
@@ -366,6 +406,12 @@ Examples:
   # Preview mode - direct connection
   python -m scouterhud.main --preview --demo monitor-bed-12 --broker localhost:1883 --topic ward3/bed12/vitals
 
+  # Phone control mode - open http://<your-ip>:8765/ on your phone
+  python -m scouterhud.main --preview --phone
+
+  # Phone + demo mode - phone as additional control
+  python -m scouterhud.main --preview --phone --demo monitor-bed-12 --broker localhost:1883 --topic ward3/bed12/vitals
+
 Controls (preview: w/a/s/d, enter, x, q | pygame: arrows, enter, escape):
   Navigate / change PIN digits    arrows or w/a/s/d
   Confirm / submit                Enter
@@ -376,7 +422,7 @@ Controls (preview: w/a/s/d, enter, x, q | pygame: arrows, enter, escape):
         """,
     )
 
-    mode = parser.add_mutually_exclusive_group(required=True)
+    mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--scan", metavar="QR_IMAGE", help="Scan QR from image file")
     mode.add_argument("--demo", metavar="DEVICE_ID", help="Connect directly by device ID")
 
@@ -387,10 +433,17 @@ Controls (preview: w/a/s/d, enter, x, q | pygame: arrows, enter, escape):
         "--preview", action="store_true",
         help="Use file-based preview backend (saves PNG to /tmp/scouterhud_live.png)",
     )
+    parser.add_argument(
+        "--phone", nargs="?", const=8765, type=int, metavar="PORT",
+        help="Enable phone WebSocket control (default port: 8765)",
+    )
 
     args = parser.parse_args()
 
-    hud = ScouterHUD(use_preview=args.preview)
+    if not args.scan and not args.demo and args.phone is None:
+        parser.error("At least one of --scan, --demo, or --phone is required")
+
+    hud = ScouterHUD(use_preview=args.preview, phone_port=args.phone)
 
     if args.preview:
         log.info(f"Preview mode: open {hud.display.output_path} in VSCode")
@@ -402,6 +455,8 @@ Controls (preview: w/a/s/d, enter, x, q | pygame: arrows, enter, escape):
         if not args.topic:
             parser.error("--topic is required with --demo")
         hud.run_demo(args.demo, args.broker, args.topic, args.auth)
+    elif args.phone is not None:
+        hud.run_phone()
 
 
 if __name__ == "__main__":

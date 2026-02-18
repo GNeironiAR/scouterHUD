@@ -60,7 +60,7 @@ class TestEventType:
             "NAV_UP", "NAV_DOWN", "NAV_LEFT", "NAV_RIGHT",
             "CONFIRM", "CANCEL", "HOME",
             "DIGIT_UP", "DIGIT_DOWN", "DIGIT_NEXT", "DIGIT_PREV", "DIGIT_SUBMIT",
-            "NEXT_DEVICE", "PREV_DEVICE", "SCAN_QR",
+            "NEXT_DEVICE", "PREV_DEVICE", "SCAN_QR", "QRLINK_RECEIVED",
             "TOGGLE_VOICE", "LOCK", "QUIT",
         ]
         for name in expected:
