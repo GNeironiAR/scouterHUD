@@ -12,6 +12,18 @@ An open-source wearable ecosystem that lets you see any device's data floating i
 
 ---
 
+## Why
+
+**Every time you look down, you lose something.** The nurse turns to the monitor — and misses the patient moving. Your partner checks the speedometer — 8 meters blind at 60 km/h. The factory worker reads the gauge — eyes off the press. The DevOps engineer puts down the cable to check Grafana on their phone.
+
+ScouterHUD keeps information in your line of sight so you never have to look away from what matters. Premium cars have HUDs — for $2000+. ScouterHUD does it for $50 with open hardware. No camera, no privacy concerns, no vendor lock-in.
+
+> *"ScouterHUD exists because the most important information is the kind that doesn't make you look away from what you're doing."*
+
+See [Why ScouterHUD](docs/why-scouterhud.md) for the full case by vertical (medical, automotive, industrial, IT, home).
+
+---
+
 ## How it works
 
 Every device has a small QR code. You scan it with the ScouterApp on your phone, authenticate with your fingerprint or FaceID, and live data appears in your HUD — overlaid on your real vision.
@@ -56,17 +68,19 @@ The app scans it with the phone camera, sends the URL to the HUD, and it connect
 
 ## Current status
 
-The software is functional and tested end-to-end on desktop:
+The full software stack is functional and tested end-to-end — HUD + App + Emulator:
 
+- **ScouterApp** (Flutter, Android) — v0.2.0 working on phone. QR scanning, numeric keypad for PIN, D-pad, auto-reconnect WebSocket. [APK builds from source](docs/STATUS.md#phase-a1--scouterapp-flutter-mvp)
+- **ScouterHUD Software** — MQTT transport, 6 device-specific layouts, preview mode for WSL2/headless
 - **Device Emulator** — 5 simulated IoT devices publishing realistic data via MQTT
-- **ScouterHUD Software** — MQTT transport, 6 device-specific layouts, preview mode (no camera needed)
-- **Input System** — Keyboard input with navigation and numeric modes (App/Gauntlet-ready architecture)
-- **PIN Auth** — Interactive PIN entry screen with validation and retry
-- **Multi-device** — Device history with switching (next/prev/list)
+- **Phone Control** — WebSocket server + Flutter app + web fallback for remote control
+- **Input System** — Keyboard, phone (WebSocket), Gauntlet (BLE stub) — all unified via InputManager
+- **PIN Auth** — Interactive 4-digit PIN with direct numpad entry (phone) or rotary +/- (keyboard/Gauntlet)
+- **Multi-device** — Device history with switching (next/prev/list), QR scanning between devices
 - **State Machine** — SCANNING > AUTH > CONNECTING > STREAMING > DEVICE_LIST > ERROR
-- **116 Unit Tests** — Full coverage of protocol, auth, renderer, input, connection, gauntlet
+- **163 Python + 10 Flutter Tests** — Full coverage of protocol, auth, renderer, input, connection, phone, gauntlet
 
-Next: ScouterApp PoC (WebSocket + HTML control page with QR scanning + biometric auth), then hardware prototyping.
+Next: biometric auth (FaceID/fingerprint replaces PIN), then hardware prototyping.
 
 See [docs/STATUS.md](docs/STATUS.md) for detailed progress.
 
@@ -95,8 +109,12 @@ cd emulator && ../.venv/bin/python emulator.py
 
 **Terminal 3 — ScouterHUD**
 ```bash
+# Keyboard control
 cd software && PYTHONPATH=. ../.venv/bin/python -m scouterhud.main \
     --preview --demo monitor-bed-12 --broker localhost:1883 --topic ward3/bed12/vitals
+
+# Phone control (ScouterApp or browser at http://<your-ip>:8765/)
+cd software && PYTHONPATH=. ../.venv/bin/python -m scouterhud.main --preview --phone
 ```
 
 Then open `/tmp/scouterhud_live.png` in any image viewer to see the HUD output live.
@@ -141,12 +159,11 @@ scouterHUD/
 │   │   ├── qrlink/              # QR-Link protocol + MQTT transport
 │   │   ├── input/               # Input system (keyboard, App/Gauntlet BLE)
 │   │   └── auth/                # PIN auth flow
-│   └── tests/                   # 116 unit tests (pytest)
+│   └── tests/                   # 163 unit tests (pytest)
 │
-├── app/                         # (planned) ScouterApp — phone companion
-│   ├── web/                     # PoC: WebSocket + HTML control page
-│   ├── flutter/                 # MVP: Flutter app (Android + iOS)
-│   └── overlay/                 # Tactile overlay 3D models
+├── app/                         # ScouterApp — phone companion
+│   ├── web/                     # Web fallback control page (HTML + JS)
+│   └── flutter/scouter_app/     # Flutter app v0.2.0 (Android APK builds)
 │
 ├── docs/                        # Design docs + status
 │   ├── STATUS.md
@@ -175,14 +192,16 @@ scouterHUD/
 
 | Layer | Technology |
 |-------|-----------|
-| HUD software | Python 3.12, Pillow, pygame, paho-mqtt, pyzbar |
+| HUD software | Python 3.12, Pillow, pygame, paho-mqtt, pyzbar, websockets |
+| ScouterApp | Flutter/Dart, Provider, mobile_scanner, web_socket_channel |
 | Emulator | Python 3.12, asyncio, paho-mqtt, qrcode, reportlab |
 | Firmware (planned) | C++, PlatformIO, Arduino, ESP-IDF |
-| Protocol | QR-Link (custom), MQTT, BLE GATT |
+| Protocol | QR-Link (custom), MQTT, WebSocket JSON, BLE GATT |
 | Display | SPI (ST7789), beam splitter optics |
 
 ## Documentation
 
+- [Why ScouterHUD](docs/why-scouterhud.md) — The case for eyes-up information, by vertical
 - [Project Status](docs/STATUS.md) — What's done, what's next, how to test
 - [Ecosystem Overview](docs/ecosystem-overview.md) — The vision in plain language
 - [ScouterApp Design](docs/app-tech-doc.md) — Phone companion app + tactile overlay
