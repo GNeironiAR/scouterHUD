@@ -61,7 +61,7 @@ class _ScouterAppState extends State<ScouterApp> {
         title: 'ScouterApp',
         debugShowCheckedModeBanner: false,
         theme: ThemeData.dark().copyWith(
-          scaffoldBackgroundColor: const Color(0xFF111111),
+          scaffoldBackgroundColor: const Color(0xFF1A1A2E),
         ),
         home: _AppHome(wsService: _wsService),
       ),
@@ -123,7 +123,7 @@ class _ConnectScreenState extends State<_ConnectScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111111),
+      backgroundColor: const Color(0xFF1A1A2E),
       body: Center(
         child: SizedBox(
           width: 400,
@@ -180,7 +180,7 @@ class _ConnectScreenState extends State<_ConnectScreen> {
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.green, width: 2),
                     foregroundColor: Colors.green,
-                    backgroundColor: const Color(0xFF1A1A1A),
+                    backgroundColor: const Color(0xFF16213E),
                   ),
                   onPressed: _connecting ? null : _connect,
                   child: Text(

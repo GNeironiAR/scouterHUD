@@ -1,6 +1,6 @@
 # ScouterHUD — Estado del Proyecto
 
-**Última actualización:** 2026-02-17
+**Última actualización:** 2026-02-20
 
 ---
 
@@ -160,7 +160,7 @@ Software principal del ScouterHUD con display emulado en desktop.
 
 | Archivo | Descripción | Estado |
 |---------|-------------|--------|
-| `software/scouterhud/input/events.py` | EventType enum (30 tipos) + InputEvent dataclass | Listo |
+| `software/scouterhud/input/events.py` | EventType enum (35 tipos: +ALPHA_KEY/BACKSPACE/ENTER/SHIFT, AI_CHAT_MESSAGE, BIOMETRIC_AUTH) + InputEvent dataclass | Listo |
 | `software/scouterhud/input/backend.py` | ABC InputBackend (start, stop, poll) | Listo |
 | `software/scouterhud/input/keyboard_input.py` | KeyboardInput (pygame) + StdinKeyboardInput (preview/wasd) | Listo |
 | `software/scouterhud/input/input_manager.py` | InputManager: poll N backends, toggle modo numérico | Listo |
@@ -184,15 +184,20 @@ Software principal del ScouterHUD con display emulado en desktop.
 
 *ScouterApp (celular — WebSocket):*
 
-| Control | Acción |
-|---------|--------|
-| D-pad ▲▼◄► + OK | Navegación + confirmar (modo navegación) |
-| Numpad 0-9 + ⌫ + SEND | Entrada directa de dígitos (modo PIN) |
-| CANCEL | Cancelar / volver |
-| HOME | Abrir lista de dispositivos |
-| SCAN QR | Escanear QR-Link con cámara del celular |
-| URL INPUT | Ingresar QR-Link URL manualmente |
-| NEXT ▶ / ◀ PREV | Cambiar dispositivo |
+| Panel | Control | Acción |
+|-------|---------|--------|
+| BASE | D-pad ▲▼◄► + OK | Navegación + confirmar. ◀▶ = prev/next device en streaming |
+| BASE | CANCEL / HOME / QR SCAN / URL | Botones de acción (lista vertical) |
+| BASE | AUTH (fingerprint) | Evento biometric_auth (placeholder) |
+| BASE | ◆ AI CHAT | Abre pantalla de chat AI |
+| BASE | Swipe → borde izq | Abre NUMPAD full-screen |
+| BASE | Swipe ← borde der | Abre ALPHA full-screen |
+| NUMPAD | 0-9 + ⌫ + SEND | Entrada directa de dígitos (modo PIN) |
+| NUMPAD | Swipe ← | Cierra numpad (no disponible en PIN mode) |
+| ALPHA | QWERTY + SPACE + ENTER + ⌫ | Entrada de texto (shift toggle) |
+| ALPHA | Swipe → | Cierra teclado |
+| AI CHAT | TextField + SEND | Enviar mensaje al AI (stub: echo response) |
+| AI CHAT | ✕ CLOSE | Cierra chat |
 
 ### PIN Auth Flow
 **Estado:** Completado
@@ -246,7 +251,7 @@ Software principal del ScouterHUD con display emulado en desktop.
 ### Unit Tests
 **Estado:** Completado
 
-163 tests Python + 10 tests Flutter cubriendo todos los módulos core. Python tests corren en <0.3s sin hardware ni broker.
+163 tests Python + 17 tests Flutter cubriendo todos los módulos core. Python tests corren en <0.3s sin hardware ni broker.
 
 ```bash
 cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
@@ -261,7 +266,7 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 | `tests/test_connection.py` | 11 | Device history, switching, dedup, mock MQTT transport |
 | `tests/test_gauntlet.py` | 21 | Pad→event translation (nav + numeric), BLE notification parser, battery |
 | `tests/test_phone_input.py` | 47 | PhoneInput: message parsing, event map (incl. digit_0..9), queue, state broadcast |
-| `app/flutter/.../test/` | 10 | Flutter: widget tests, WebSocket service, HUD state, QR scanner |
+| `app/flutter/.../test/` | 17 | Flutter: HUD state, panel state, chat messages, unmodifiable list |
 
 ### BLE Gauntlet Input Stub
 **Estado:** Completado (stub — necesita hardware ESP32 para test real)
@@ -314,7 +319,7 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 
 | Archivo | Descripción | Estado |
 |---------|-------------|--------|
-| `software/scouterhud/input/phone_input.py` | PhoneInput backend: WebSocket server + HTTP serving + digit events | Listo |
+| `software/scouterhud/input/phone_input.py` | PhoneInput backend: WebSocket server + HTTP + digits + alpha + ai_chat + biometric | Listo |
 | `app/web/index.html` | Página de control mobile: D-pad, modo PIN, QR scan, URL input, status bar | Listo |
 | `software/tests/test_phone_input.py` | 47 tests: parsing, event map, queue, state broadcast | Listo |
 
@@ -349,7 +354,7 @@ code /tmp/scouterhud_live.png
 | Servidor AWS | `qrlink://v1/srv-prod-01/mqtt/localhost:1883?auth=token&t=infra/prod/server01` | token |
 
 ### Phase A1 — ScouterApp: Flutter MVP
-**Estado:** En progreso — v0.2.0 funcional en Android
+**Estado:** v0.3.0 — Sistema de paneles gesture-based completado
 
 - [x] Flutter app con pantalla de control (D-pad + confirm + cancel)
 - [x] **QR scanning nativo** (mobile_scanner 6.0.11 — cámara del celular)
@@ -359,13 +364,21 @@ code /tmp/scouterhud_live.png
 - [x] D-pad grande (80x68px) para navegación
 - [x] Teclado numérico directo para PIN entry (digit_0..9, backspace, submit)
 - [x] Cambio automático D-pad ↔ Numpad según modo del HUD
-- [x] Botones de acción: CANCEL, HOME, SCAN QR, URL INPUT, NEXT, PREV
-- [x] Margen derecho 48px (zona segura para botones físicos del celular)
-- [x] Status bar con estado de conexión + estado del HUD + nombre del dispositivo
+- [x] Botones de acción: CANCEL, HOME, QR SCAN, URL INPUT (lista vertical)
+- [x] Margen derecho 48px + izquierdo 40px (zonas seguras: botones físicos + cámara)
+- [x] Status bar 3 columnas: conexión | SCOUTERAPP + device | modo (REMOTE/NUMPAD/KEYBOARD/AI CHAT)
 - [x] PIN banner visible cuando el HUD pide PIN
 - [x] URL input manual (dialog para pegar qrlink:// URLs)
-- [x] 10 tests Flutter passing
-- [ ] **Autenticación biométrica** (FaceID/huella + Keychain/Keystore)
+- [x] **Sistema de paneles full-screen** (BASE/NUMPAD/ALPHA/AI CHAT) — una pantalla a la vez
+- [x] **Teclado QWERTY custom** (SPACE vertical izq, 3 filas QWERTY, ENTER vertical der, SHIFT, ⌫)
+- [x] **Swipe gestures**: borde izq → NUMPAD, borde der → ALPHA, swipe inverso para cerrar
+- [x] **AI Chat screen** (header púrpura, mensajes user/AI, TextField + SEND, stub backend)
+- [x] **Botón fingerprint** (88x180px, icono + AUTH label, evento biometric_auth)
+- [x] **Tema visual**: fondo navy #1A1A2E, colores por función (red=cancel, blue=home, yellow=numpad, green=confirm, orange=url, purple=AI, cyan=keyboard)
+- [x] D-pad ◀▶ → prev/next device en streaming (Python backend, sin botones duplicados)
+- [x] Protocolo WebSocket extendido: alpha_key (con value), alpha_backspace/enter/shift, ai_chat, ai_response, biometric_auth
+- [x] 17 tests Flutter + 163 tests Python passing
+- [ ] **Autenticación biométrica** (FaceID/huella + Keychain/Keystore) — botón listo, implementación pendiente
 - [ ] Pantalla device list en la app
 - [ ] Comunicación BLE con el HUD (actualmente usa WebSocket vía WiFi)
 - [ ] Pairing flow (escanear QR del HUD)
@@ -376,19 +389,31 @@ code /tmp/scouterhud_live.png
 |---------|-------|---------|--------|
 | v0.1.3 | 2026-02-17 | Primera versión funcional: WebSocket, QR scan, D-pad, PIN +/− | 67.9MB |
 | v0.2.0 | 2026-02-17 | UI/UX: D-pad grande, numpad directo, márgenes, layout reorganizado | 67.9MB |
+| v0.3.0 | 2026-02-20 | Panel system: QWERTY keyboard, AI Chat, fingerprint button, swipe gestures, dark navy theme | 68.5MB |
 
 **Archivos Flutter:**
 
 | Archivo | Descripción | Estado |
 |---------|-------------|--------|
-| `app/flutter/scouter_app/lib/main.dart` | Entry point: ScouterApp + ConnectScreen + auto-connect | Listo |
-| `app/flutter/scouter_app/lib/screens/control_screen.dart` | Pantalla principal: D-pad/Numpad + grid de acciones | Listo |
-| `app/flutter/scouter_app/lib/screens/qr_scanner_screen.dart` | QR scanner con mobile_scanner + error handling | Listo |
-| `app/flutter/scouter_app/lib/widgets/dpad_widget.dart` | D-pad 5 botones (80x68px) para navegación | Listo |
-| `app/flutter/scouter_app/lib/widgets/numpad_widget.dart` | Teclado numérico 4x3 para PIN entry | Listo |
-| `app/flutter/scouter_app/lib/widgets/status_bar_widget.dart` | Status bar: conexión + estado HUD + device name | Listo |
-| `app/flutter/scouter_app/lib/services/websocket_service.dart` | WebSocket client con await ready + auto-reconnect | Listo |
-| `app/flutter/scouter_app/lib/models/hud_state.dart` | HudConnection ChangeNotifier (state, numericMode, error) | Listo |
+| `lib/main.dart` | Entry point: ScouterApp + ConnectScreen + auto-connect | Listo |
+| `lib/screens/control_screen.dart` | Panel router: BASE/NUMPAD/ALPHA/AI_CHAT + swipe gestures + edge hints | Listo |
+| `lib/screens/numpad_screen.dart` | Full-screen numpad con PIN banner (auto-open en PIN mode) | Listo |
+| `lib/screens/alpha_keyboard_screen.dart` | Full-screen QWERTY keyboard con safe zones | Listo |
+| `lib/screens/ai_chat_screen.dart` | Full-screen AI chat: mensajes, input, header con CLOSE | Listo |
+| `lib/screens/qr_scanner_screen.dart` | QR scanner con mobile_scanner + error handling | Listo |
+| `lib/widgets/dpad_widget.dart` | D-pad 5 botones (80x68px) para navegación | Listo |
+| `lib/widgets/numpad_widget.dart` | Teclado numérico 4x3 para PIN entry | Listo |
+| `lib/widgets/alpha_keyboard_widget.dart` | QWERTY: SPACE(80px)+SHIFT izq, 3 filas centro, ENTER(80px) der, ⌫ en fila 3 | Listo |
+| `lib/widgets/action_button_grid.dart` | Lista vertical: CANCEL, HOME, QR SCAN, URL | Listo |
+| `lib/widgets/fingerprint_button.dart` | Botón biométrico 88x180px con icono fingerprint | Listo |
+| `lib/widgets/ai_chat_button.dart` | Botón púrpura "◆ AI CHAT" debajo del D-pad | Listo |
+| `lib/widgets/edge_hint_widget.dart` | Líneas verticales con label rotado (NUMPAD/ALPHA) | Listo |
+| `lib/widgets/gesture_guide_bar.dart` | Barra inferior: "◁ NUMPAD" / "ALPHA ▷" | Listo |
+| `lib/widgets/status_bar_widget.dart` | 3 columnas: conexión, titulo+device, modo activo | Listo |
+| `lib/services/websocket_service.dart` | WebSocket client + sendAlphaKey + sendAiChat + ai_response handler | Listo |
+| `lib/models/hud_state.dart` | HudConnection: state, numericMode, activePanel, chatMessages | Listo |
+| `lib/models/panel_state.dart` | Enum: base, numpad, alpha, aiChat | Listo |
+| `lib/theme/scouter_colors.dart` | Constantes de color: background, surface, red..cyan, text, border | Listo |
 
 **Build pipeline:**
 
@@ -539,7 +564,7 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m scouterhud.main 
 Luego abrir `/tmp/scouterhud_live.png` en VSCode para ver el HUD en vivo (`code /tmp/scouterhud_live.png`).
 
 Para phone control:
-- **ScouterApp (recomendado):** Instalar APK en Android (`ScouterApp-v0.2.0.apk`), ingresar `<tu-ip>:8765`
+- **ScouterApp (recomendado):** Instalar APK en Android (`scouter_app_v0.3.3.apk`), ingresar `<tu-ip>:8765`
 - **Web fallback:** Abrir `http://localhost:8765/` (o `http://<tu-ip>:8765/` desde celular en la misma WiFi)
 
 **Controles en terminal (modo preview):** `w/a/s/d` = navegar, `enter` = confirmar, `x` = cancelar, `h` = lista de dispositivos, `n/p` = cambiar dispositivo, `q` = salir.

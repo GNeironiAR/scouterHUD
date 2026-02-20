@@ -40,6 +40,18 @@ class EventType(Enum):
     DIGIT_9 = auto()
     DIGIT_BACKSPACE = auto()
 
+    # Alpha/text entry (phone keyboard)
+    ALPHA_KEY = auto()        # value = character ("a".."z", " ", etc.)
+    ALPHA_BACKSPACE = auto()
+    ALPHA_ENTER = auto()
+    ALPHA_SHIFT = auto()
+
+    # AI Chat
+    AI_CHAT_MESSAGE = auto()  # value = full message string
+
+    # Biometric
+    BIOMETRIC_AUTH = auto()   # fingerprint/biometric auth request
+
     # Device management
     NEXT_DEVICE = auto()
     PREV_DEVICE = auto()

@@ -1,170 +1,232 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/hud_state.dart';
+import '../models/panel_state.dart';
 import '../services/websocket_service.dart';
+import '../theme/scouter_colors.dart';
+import '../widgets/action_button_grid.dart';
+import '../widgets/ai_chat_button.dart';
 import '../widgets/dpad_widget.dart';
-import '../widgets/numpad_widget.dart';
+import '../widgets/edge_hint_widget.dart';
+import '../widgets/fingerprint_button.dart';
+import '../widgets/gesture_guide_bar.dart';
 import '../widgets/status_bar_widget.dart';
+import 'ai_chat_screen.dart';
+import 'alpha_keyboard_screen.dart';
+import 'numpad_screen.dart';
 import 'qr_scanner_screen.dart';
 
-class ControlScreen extends StatelessWidget {
+class ControlScreen extends StatefulWidget {
   final WebSocketService wsService;
 
   const ControlScreen({super.key, required this.wsService});
 
   @override
+  State<ControlScreen> createState() => _ControlScreenState();
+}
+
+class _ControlScreenState extends State<ControlScreen> {
+  // Track previous numericMode to only react to transitions
+  bool _prevNumericMode = false;
+
+  void _openNumpad() => _syncPanelState(PanelState.numpad);
+  void _closeNumpad() => _syncPanelState(PanelState.base);
+  void _openAlpha() => _syncPanelState(PanelState.alpha);
+  void _closeAlpha() => _syncPanelState(PanelState.base);
+  void _openAiChat() => _syncPanelState(PanelState.aiChat);
+  void _closeAiChat() => _syncPanelState(PanelState.base);
+
+  void _syncPanelState(PanelState panel) {
+    final hud = context.read<HudConnection>();
+    hud.setActivePanel(panel);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF111111),
-      body: Column(
-        children: [
-          const StatusBarWidget(),
-          // PIN banner
-          Consumer<HudConnection>(
-            builder: (context, hud, _) {
-              if (!hud.numericMode) return const SizedBox.shrink();
-              return Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                color: const Color(0xFF333300),
-                child: const Text(
-                  'PIN ENTRY \u2014 Type digits, \u232B to delete, SEND to submit',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.yellow,
-                    letterSpacing: 2,
-                  ),
+      backgroundColor: ScouterColors.background,
+      body: Consumer<HudConnection>(
+        builder: (context, hud, _) {
+          // Only auto-open/close numpad on numericMode TRANSITIONS
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (hud.numericMode && !_prevNumericMode) {
+              _openNumpad();
+            } else if (!hud.numericMode && _prevNumericMode) {
+              _closeNumpad();
+            }
+            _prevNumericMode = hud.numericMode;
+          });
+
+          // Full-screen overlays
+          if (hud.activePanel == PanelState.aiChat) {
+            return _wrapWithStatusBar(
+              AiChatScreen(
+                wsService: widget.wsService,
+                onClose: _closeAiChat,
+              ),
+            );
+          }
+
+          if (hud.activePanel == PanelState.alpha) {
+            return _wrapWithStatusBar(
+              _withSwipeToClose(
+                child: AlphaKeyboardScreen(
+                  wsService: widget.wsService,
                 ),
-              );
-            },
-          ),
-          // Main content
-          Expanded(
-            child: Consumer<HudConnection>(
-              builder: (context, hud, _) {
-                return Padding(
-                  padding: const EdgeInsets.only(left: 16, right: 48),
-                  child: Row(
-                    children: [
-                      // D-pad or Numpad
-                      Expanded(
-                        flex: 3,
-                        child: Center(
-                          child: hud.numericMode
-                              ? NumpadWidget(onEvent: wsService.sendEvent)
-                              : DpadWidget(onEvent: wsService.sendEvent),
-                        ),
-                      ),
-                      // Actions + Tools grid
-                      Expanded(
-                        flex: 2,
-                        child: _buildButtonGrid(context, hud.numericMode),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+                // Swipe right to close alpha
+                closeDirection: AxisDirection.right,
+                onClose: _closeAlpha,
+              ),
+            );
+          }
+
+          if (hud.activePanel == PanelState.numpad) {
+            return _wrapWithStatusBar(
+              _withSwipeToClose(
+                child: NumpadScreen(
+                  wsService: widget.wsService,
+                  pinMode: hud.numericMode,
+                ),
+                // Swipe left to close numpad
+                closeDirection: AxisDirection.left,
+                onClose: hud.numericMode ? null : _closeNumpad,
+              ),
+            );
+          }
+
+          // BASE layout
+          return _wrapWithStatusBar(
+            _buildBaseContent(context, hud),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildButtonGrid(BuildContext context, bool numericMode) {
+  Widget _wrapWithStatusBar(Widget content) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _actionButton('CANCEL', 'cancel', Colors.red),
-            const SizedBox(width: 10),
-            _toolButton(context, 'SCAN QR', Colors.yellow, () => _openQrScanner(context)),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _actionButton('HOME', 'home', Colors.blue),
-            const SizedBox(width: 10),
-            _toolButton(context, 'URL INPUT', Colors.orange, () => _showUrlInput(context)),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _actionButton('NEXT \u25B6', 'next_device', Colors.grey),
-            const SizedBox(width: 10),
-            _actionButton('\u25C0 PREV', 'prev_device', Colors.grey),
-          ],
+        const StatusBarWidget(),
+        Expanded(child: content),
+      ],
+    );
+  }
+
+  /// Wraps a full-screen panel with edge swipe detection for closing.
+  /// Uses a transparent strip on the appropriate edge that captures drags
+  /// without interfering with the panel's own buttons.
+  Widget _withSwipeToClose({
+    required Widget child,
+    required AxisDirection closeDirection,
+    VoidCallback? onClose,
+  }) {
+    if (onClose == null) return child;
+
+    final isSwipeRight = closeDirection == AxisDirection.right;
+
+    return Stack(
+      children: [
+        child,
+        // Edge strip for swipe-to-close
+        Positioned(
+          left: isSwipeRight ? 0 : null,
+          right: isSwipeRight ? null : 0,
+          top: 0,
+          bottom: 0,
+          width: 60,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragEnd: (details) {
+              final velocity = details.velocity.pixelsPerSecond.dx;
+              if (isSwipeRight && velocity > 200) {
+                onClose();
+              } else if (!isSwipeRight && velocity < -200) {
+                onClose();
+              }
+            },
+          ),
         ),
       ],
     );
   }
 
-  Widget _actionButton(String label, String event, Color color) {
-    return SizedBox(
-      width: 120,
-      height: 56,
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: color, width: 2),
-          foregroundColor: color,
-          backgroundColor: const Color(0xFF1A1A1A),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          padding: EdgeInsets.zero,
-        ),
-        onPressed: () {
-          HapticFeedback.mediumImpact();
-          wsService.sendEvent(event);
-        },
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildBaseContent(BuildContext context, HudConnection hud) {
+    double dragStartX = 0;
 
-  Widget _toolButton(
-    BuildContext context,
-    String label,
-    Color color,
-    VoidCallback onPressed,
-  ) {
-    return SizedBox(
-      width: 120,
-      height: 56,
-      child: OutlinedButton(
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: color, width: 2),
-          foregroundColor: color,
-          backgroundColor: const Color(0xFF1A1A1A),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          padding: EdgeInsets.zero,
-        ),
-        onPressed: onPressed,
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
+    return Column(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onHorizontalDragStart: (details) {
+              dragStartX = details.globalPosition.dx;
+            },
+            onHorizontalDragEnd: (details) {
+              final screenWidth = MediaQuery.of(context).size.width;
+              final velocity = details.velocity.pixelsPerSecond.dx;
+
+              // Swipe right from left edge → open numpad
+              if (dragStartX < 80 && velocity > 200) {
+                _openNumpad();
+              }
+              // Swipe left from right edge → open alpha
+              if (dragStartX > screenWidth - 128 && velocity < -200) {
+                _openAlpha();
+              }
+            },
+            behavior: HitTestBehavior.translucent,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16, right: 8),
+              child: Row(
+                children: [
+                  // Left edge hint
+                  const EdgeHintWidget(
+                    label: 'NUMPAD',
+                    color: ScouterColors.yellow,
+                    isLeft: true,
+                  ),
+                  // D-pad + AI Chat button
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        DpadWidget(onEvent: widget.wsService.sendEvent),
+                        const SizedBox(height: 12),
+                        AiChatButton(onPressed: _openAiChat),
+                      ],
+                    ),
+                  ),
+                  // Action buttons (vertical list)
+                  Expanded(
+                    flex: 2,
+                    child: ActionButtonGrid(
+                      onEvent: widget.wsService.sendEvent,
+                      onScanQr: () => _openQrScanner(context),
+                      onUrlInput: () => _showUrlInput(context),
+                    ),
+                  ),
+                  // Fingerprint button
+                  Padding(
+                    padding: const EdgeInsets.only(right: 40),
+                    child: FingerprintButton(
+                      onPressed: () =>
+                          widget.wsService.sendEvent('biometric_auth'),
+                    ),
+                  ),
+                  // Right edge hint
+                  const EdgeHintWidget(
+                    label: 'ALPHA',
+                    color: ScouterColors.cyan,
+                    isLeft: false,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
+        GestureGuideBar(activePanel: hud.activePanel),
+      ],
     );
   }
 
@@ -173,7 +235,7 @@ class ControlScreen extends StatelessWidget {
       MaterialPageRoute(
         builder: (_) => QrScannerScreen(
           onQrLinkDetected: (url) {
-            wsService.sendQrLink(url);
+            widget.wsService.sendQrLink(url);
             Navigator.of(context).pop();
           },
         ),
@@ -186,39 +248,51 @@ class ControlScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF222222),
+        backgroundColor: ScouterColors.surface,
         title: const Text(
           'Enter QR-Link URL',
-          style: TextStyle(color: Colors.yellow, fontFamily: 'monospace'),
+          style: TextStyle(
+            color: ScouterColors.orange,
+            fontFamily: 'monospace',
+          ),
         ),
         content: TextField(
           controller: controller,
-          style: const TextStyle(color: Colors.green, fontFamily: 'monospace'),
+          style: const TextStyle(
+            color: ScouterColors.green,
+            fontFamily: 'monospace',
+          ),
           decoration: const InputDecoration(
             hintText: 'qrlink://v1/device/mqtt/host:port?...',
-            hintStyle: TextStyle(color: Color(0xFF555555)),
+            hintStyle: TextStyle(color: ScouterColors.gray),
             enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.green),
+              borderSide: BorderSide(color: ScouterColors.green),
             ),
             focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.green, width: 2),
+              borderSide: BorderSide(color: ScouterColors.green, width: 2),
             ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('CANCEL', style: TextStyle(color: Colors.red)),
+            child: const Text(
+              'CANCEL',
+              style: TextStyle(color: ScouterColors.red),
+            ),
           ),
           TextButton(
             onPressed: () {
               final url = controller.text.trim();
               if (url.startsWith('qrlink://')) {
-                wsService.sendQrLink(url);
+                widget.wsService.sendQrLink(url);
                 Navigator.pop(ctx);
               }
             },
-            child: const Text('SEND', style: TextStyle(color: Colors.green)),
+            child: const Text(
+              'SEND',
+              style: TextStyle(color: ScouterColors.green),
+            ),
           ),
         ],
       ),

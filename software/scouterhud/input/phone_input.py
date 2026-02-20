@@ -47,6 +47,11 @@ _EVENT_MAP: dict[str, EventType] = {
     "digit_8": EventType.DIGIT_8,
     "digit_9": EventType.DIGIT_9,
     "digit_backspace": EventType.DIGIT_BACKSPACE,
+    "alpha_key": EventType.ALPHA_KEY,
+    "alpha_backspace": EventType.ALPHA_BACKSPACE,
+    "alpha_enter": EventType.ALPHA_ENTER,
+    "alpha_shift": EventType.ALPHA_SHIFT,
+    "biometric_auth": EventType.BIOMETRIC_AUTH,
     "next_device": EventType.NEXT_DEVICE,
     "prev_device": EventType.PREV_DEVICE,
     "scan_qr": EventType.SCAN_QR,
@@ -156,6 +161,10 @@ class PhoneInput(InputBackend):
         msg.update(kwargs)
         self._broadcast(msg)
 
+    def send_ai_response(self, message: str) -> None:
+        """Send AI response message to all connected phones."""
+        self._broadcast({"type": "ai_response", "message": message})
+
     # ── Private ──
 
     def _load_html(self) -> None:
@@ -256,7 +265,9 @@ class PhoneInput(InputBackend):
             etype = _EVENT_MAP.get(event_name)
             if etype:
                 log.debug(f"Phone input: {event_name} → {etype.name}")
-                return InputEvent(type=etype, source="phone")
+                # Pass through value for events that carry data (e.g. alpha_key)
+                value = data.get("value")
+                return InputEvent(type=etype, value=value, source="phone")
             else:
                 log.warning(f"Phone input: unknown event '{event_name}'")
 
@@ -266,6 +277,15 @@ class PhoneInput(InputBackend):
                 return InputEvent(
                     type=EventType.QRLINK_RECEIVED,
                     value=url,
+                    source="phone",
+                )
+
+        elif msg_type == "ai_chat":
+            message = data.get("message", "")
+            if message:
+                return InputEvent(
+                    type=EventType.AI_CHAT_MESSAGE,
+                    value=message,
                     source="phone",
                 )
 

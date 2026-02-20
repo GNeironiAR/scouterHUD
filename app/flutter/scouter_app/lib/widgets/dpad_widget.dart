@@ -61,7 +61,7 @@ class DpadWidget extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           side: const BorderSide(color: Colors.green, width: 2),
           foregroundColor: Colors.green,
-          backgroundColor: const Color(0xFF1A1A1A),
+          backgroundColor: const Color(0xFF16213E),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: EdgeInsets.zero,
         ),

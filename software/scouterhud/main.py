@@ -251,6 +251,11 @@ class ScouterHUD:
             self._running = False
             return
 
+        # AI chat messages are handled globally (any state)
+        if event.type == EventType.AI_CHAT_MESSAGE:
+            self._handle_ai_chat(event)
+            return
+
         handler = {
             AppState.SCANNING: self._handle_scanning_event,
             AppState.AUTH: self._handle_auth_event,
@@ -312,10 +317,25 @@ class ScouterHUD:
                 log.info(f"Switching to previous device: {prev_link.id}")
                 self._initiate_connection(prev_link)
 
+        elif event.type == EventType.NAV_LEFT:
+            prev_link = self.connection.switch_prev()
+            if prev_link:
+                log.info(f"D-pad left → switching to previous device: {prev_link.id}")
+                self._initiate_connection(prev_link)
+
+        elif event.type == EventType.NAV_RIGHT:
+            next_link = self.connection.switch_next()
+            if next_link:
+                log.info(f"D-pad right → switching to next device: {next_link.id}")
+                self._initiate_connection(next_link)
+
         elif event.type == EventType.HOME:
             if self.connection.device_count > 0:
                 self._device_list_index = 0
                 self._set_state(AppState.DEVICE_LIST)
+
+        elif event.type == EventType.BIOMETRIC_AUTH:
+            log.info("Biometric auth requested (not yet implemented)")
 
         elif event.type == EventType.CANCEL:
             self.connection.disconnect()
@@ -343,6 +363,15 @@ class ScouterHUD:
         """Any key press on error screen returns to previous state."""
         if event.type in (EventType.CONFIRM, EventType.CANCEL):
             self._set_state(self._error_return_state)
+
+    def _handle_ai_chat(self, event) -> None:
+        """Handle AI chat message from phone. Stub: echo back a placeholder."""
+        message = event.value or ""
+        log.info(f"AI chat from {event.source}: {message}")
+        if self._phone_input:
+            self._phone_input.send_ai_response(
+                f"AI coming soon. You said: \"{message}\""
+            )
 
     # ── Rendering ──
 

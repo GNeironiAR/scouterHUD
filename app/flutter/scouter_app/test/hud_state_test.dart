@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scouter_app/models/hud_state.dart';
+import 'package:scouter_app/models/panel_state.dart';
 
 void main() {
   group('HudConnection', () {
@@ -15,6 +16,8 @@ void main() {
       expect(hud.numericMode, false);
       expect(hud.deviceName, null);
       expect(hud.errorMessage, null);
+      expect(hud.activePanel, PanelState.base);
+      expect(hud.chatMessages, isEmpty);
     });
 
     test('setConnected updates state', () {
@@ -79,6 +82,74 @@ void main() {
 
       hud.setNumericMode(true);
       expect(notifyCount, 3);
+    });
+
+    test('setActivePanel updates panel state', () {
+      hud.setActivePanel(PanelState.numpad);
+      expect(hud.activePanel, PanelState.numpad);
+
+      hud.setActivePanel(PanelState.alpha);
+      expect(hud.activePanel, PanelState.alpha);
+
+      hud.setActivePanel(PanelState.aiChat);
+      expect(hud.activePanel, PanelState.aiChat);
+
+      hud.setActivePanel(PanelState.base);
+      expect(hud.activePanel, PanelState.base);
+    });
+
+    test('setActivePanel notifies listeners', () {
+      int notifyCount = 0;
+      hud.addListener(() => notifyCount++);
+
+      hud.setActivePanel(PanelState.numpad);
+      expect(notifyCount, 1);
+    });
+
+    test('disconnect resets panel to base', () {
+      hud.setConnected(true);
+      hud.setActivePanel(PanelState.aiChat);
+      expect(hud.activePanel, PanelState.aiChat);
+
+      hud.setConnected(false);
+      expect(hud.activePanel, PanelState.base);
+    });
+
+    test('addChatMessage adds messages', () {
+      hud.addChatMessage('user', 'Show RPM');
+      expect(hud.chatMessages.length, 1);
+      expect(hud.chatMessages[0].sender, 'user');
+      expect(hud.chatMessages[0].text, 'Show RPM');
+
+      hud.addChatMessage('ai', 'Displaying RPM gauge');
+      expect(hud.chatMessages.length, 2);
+      expect(hud.chatMessages[1].sender, 'ai');
+    });
+
+    test('addChatMessage notifies listeners', () {
+      int notifyCount = 0;
+      hud.addListener(() => notifyCount++);
+
+      hud.addChatMessage('user', 'test');
+      expect(notifyCount, 1);
+    });
+
+    test('clearChatMessages clears all messages', () {
+      hud.addChatMessage('user', 'msg1');
+      hud.addChatMessage('ai', 'msg2');
+      expect(hud.chatMessages.length, 2);
+
+      hud.clearChatMessages();
+      expect(hud.chatMessages, isEmpty);
+    });
+
+    test('chatMessages returns unmodifiable list', () {
+      hud.addChatMessage('user', 'test');
+      final messages = hud.chatMessages;
+      expect(
+        () => messages.add(ChatMessage(sender: 'user', text: 'x')),
+        throwsUnsupportedError,
+      );
     });
   });
 }

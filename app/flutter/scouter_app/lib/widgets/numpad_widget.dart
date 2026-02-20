@@ -63,7 +63,7 @@ class NumpadWidget extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: color, width: 2),
           foregroundColor: color,
-          backgroundColor: const Color(0xFF1A1A1A),
+          backgroundColor: const Color(0xFF16213E),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: EdgeInsets.zero,
         ),

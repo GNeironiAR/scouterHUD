@@ -35,6 +35,18 @@ class WebSocketService {
     _send({'type': 'input', 'event': eventName});
   }
 
+  void sendAlphaKey(String eventName, {String? value}) {
+    final msg = <String, dynamic>{'type': 'input', 'event': eventName};
+    if (value != null) {
+      msg['value'] = value;
+    }
+    _send(msg);
+  }
+
+  void sendAiChat(String message) {
+    _send({'type': 'ai_chat', 'message': message});
+  }
+
   void sendQrLink(String url) {
     _send({'type': 'qrlink', 'url': url});
   }
@@ -81,6 +93,11 @@ class WebSocketService {
         );
       } else if (type == 'mode') {
         hudConnection.setNumericMode(msg['numeric'] as bool? ?? false);
+      } else if (type == 'ai_response') {
+        final message = msg['message'] as String? ?? '';
+        if (message.isNotEmpty) {
+          hudConnection.addChatMessage('ai', message);
+        }
       }
     } catch (_) {
       // Ignore malformed messages
