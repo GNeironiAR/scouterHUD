@@ -70,17 +70,17 @@ The app scans it with the phone camera, sends the URL to the HUD, and it connect
 
 The full software stack is functional and tested end-to-end — HUD + App + Emulator:
 
-- **ScouterApp** (Flutter, Android) — v0.2.0 working on phone. QR scanning, numeric keypad for PIN, D-pad, auto-reconnect WebSocket. [APK builds from source](docs/STATUS.md#phase-a1--scouterapp-flutter-mvp)
+- **ScouterApp** (Flutter, Android) — v0.4.0 on phone. QR scanning, biometric auth (FaceID/fingerprint), gesture-based panel system (D-pad, QWERTY, numpad, AI chat, device list), auto-reconnect WebSocket. [APK builds from source](docs/STATUS.md#phase-a1--scouterapp-flutter-mvp)
 - **ScouterHUD Software** — MQTT transport, 6 device-specific layouts, preview mode for WSL2/headless
 - **Device Emulator** — 5 simulated IoT devices publishing realistic data via MQTT
 - **Phone Control** — WebSocket server + Flutter app + web fallback for remote control
 - **Input System** — Keyboard, phone (WebSocket), Gauntlet (BLE stub) — all unified via InputManager
-- **PIN Auth** — Interactive 4-digit PIN with direct numpad entry (phone) or rotary +/- (keyboard/Gauntlet)
-- **Multi-device** — Device history with switching (next/prev/list), QR scanning between devices
+- **Authentication** — Biometric (FaceID/fingerprint bypasses PIN) + interactive 4-digit PIN + token auth
+- **Multi-device** — Device history with switching (next/prev/list), device list screen in app, QR scanning between devices
 - **State Machine** — SCANNING > AUTH > CONNECTING > STREAMING > DEVICE_LIST > ERROR
-- **163 Python + 10 Flutter Tests** — Full coverage of protocol, auth, renderer, input, connection, phone, gauntlet
+- **167 Python + 24 Flutter Tests** (191 total) — Full coverage of protocol, auth, renderer, input, connection, phone, gauntlet
 
-Next: biometric auth (FaceID/fingerprint replaces PIN), then hardware prototyping.
+Next: hardware prototyping + security hardening (TLS, phone pairing, challenge-response). See [Security Model](docs/security-model.md).
 
 See [docs/STATUS.md](docs/STATUS.md) for detailed progress.
 
@@ -159,19 +159,23 @@ scouterHUD/
 │   │   ├── qrlink/              # QR-Link protocol + MQTT transport
 │   │   ├── input/               # Input system (keyboard, App/Gauntlet BLE)
 │   │   └── auth/                # PIN auth flow
-│   └── tests/                   # 163 unit tests (pytest)
+│   └── tests/                   # 167 unit tests (pytest)
 │
 ├── app/                         # ScouterApp — phone companion
 │   ├── web/                     # Web fallback control page (HTML + JS)
-│   └── flutter/scouter_app/     # Flutter app v0.2.0 (Android APK builds)
+│   └── flutter/scouter_app/     # Flutter app v0.4.0 (Android APK builds)
 │
 ├── docs/                        # Design docs + status
 │   ├── STATUS.md
+│   ├── why-scouterhud.md        # Why this project exists (by vertical)
+│   ├── why-this-stack.md        # Why these technologies and architecture
+│   ├── security-model.md        # Threat model + target security architecture
+│   ├── community-guide.md       # Contribution guide: interfaces + areas of impact
 │   ├── ecosystem-overview.md
 │   ├── app-tech-doc.md          # ScouterApp design
 │   ├── bridge-tech-doc.md
 │   ├── gauntlet-tech-doc.md
-│   └── camera-tech-doc.md      # Optional camera module (privacy analysis)
+│   └── camera-tech-doc.md       # Optional camera module (privacy analysis)
 │
 ├── gauntlet/                    # (optional) ESP32 firmware + hardware
 └── bridge/                      # (planned) ESP32 firmware + hardware
@@ -193,7 +197,7 @@ scouterHUD/
 | Layer | Technology |
 |-------|-----------|
 | HUD software | Python 3.12, Pillow, pygame, paho-mqtt, pyzbar, websockets |
-| ScouterApp | Flutter/Dart, Provider, mobile_scanner, web_socket_channel |
+| ScouterApp | Flutter/Dart, Provider, mobile_scanner, local_auth, web_socket_channel |
 | Emulator | Python 3.12, asyncio, paho-mqtt, qrcode, reportlab |
 | Firmware (planned) | C++, PlatformIO, Arduino, ESP-IDF |
 | Protocol | QR-Link (custom), MQTT, WebSocket JSON, BLE GATT |
@@ -202,6 +206,9 @@ scouterHUD/
 ## Documentation
 
 - [Why ScouterHUD](docs/why-scouterhud.md) — The case for eyes-up information, by vertical
+- [Why This Stack](docs/why-this-stack.md) — Technical decisions: why these tools, technologies, and architecture
+- [Security Model](docs/security-model.md) — Threat model, current state, and target security architecture
+- [Community Guide](docs/community-guide.md) — Where to contribute: interfaces, high-impact areas, principles
 - [Project Status](docs/STATUS.md) — What's done, what's next, how to test
 - [Ecosystem Overview](docs/ecosystem-overview.md) — The vision in plain language
 - [ScouterApp Design](docs/app-tech-doc.md) — Phone companion app + tactile overlay
