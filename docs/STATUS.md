@@ -31,6 +31,7 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 | ~~ScouterApp (PoC)~~ | ~~`app/web/` WebSocket + HTML~~ | ~~Input principal del ecosistema~~ | **Completado** |
 | ScouterApp (Flutter) | `app/flutter/` | App nativa Android/iOS | Después del PoC |
 | Tactile overlay | `app/overlay/` STL + molde silicona | Operación a ciegas / con guantes | Después de la app |
+| **AI Chat local (LLM on-device)** | `app/flutter/` LlmService | Asistente AI sin cloud (PII/compliance) | **Bloqueado — tooling inmaduro** |
 | Voice/AI pipeline | `software/scouterhud/input/voice.py` | Asistente por voz, STT/TTS | Baja (post-MVP) |
 | Gauntlet firmware | `gauntlet/firmware/` (ESP32, PlatformIO) | Accesorio opcional (guantes gruesos, IP67) | Baja (opcional) |
 | Bridge firmware | `bridge/firmware/` (ESP32, PlatformIO) | Hardware del Bridge | Cuando llegue el ESP32 |
@@ -188,7 +189,7 @@ Software principal del ScouterHUD con display emulado en desktop.
 |-------|---------|--------|
 | BASE | D-pad ▲▼◄► + OK | Navegación + confirmar. ◀▶ = prev/next device en streaming |
 | BASE | CANCEL / HOME / QR SCAN / URL | Botones de acción (lista vertical) |
-| BASE | AUTH (fingerprint) | Evento biometric_auth (placeholder) |
+| BASE | AUTH (fingerprint) | Auth biométrica real (FaceID/huella) — bypass PIN si OK |
 | BASE | ◆ AI CHAT | Abre pantalla de chat AI |
 | BASE | Swipe → borde izq | Abre NUMPAD full-screen |
 | BASE | Swipe ← borde der | Abre ALPHA full-screen |
@@ -251,7 +252,7 @@ Software principal del ScouterHUD con display emulado en desktop.
 ### Unit Tests
 **Estado:** Completado
 
-163 tests Python + 17 tests Flutter cubriendo todos los módulos core. Python tests corren en <0.3s sin hardware ni broker.
+167 tests Python + 24 tests Flutter (191 total) cubriendo todos los módulos core. Python tests corren en <0.3s sin hardware ni broker.
 
 ```bash
 cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
@@ -265,8 +266,8 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 | `tests/test_input.py` | 13 | EventType, InputEvent, InputManager con mock backends |
 | `tests/test_connection.py` | 11 | Device history, switching, dedup, mock MQTT transport |
 | `tests/test_gauntlet.py` | 21 | Pad→event translation (nav + numeric), BLE notification parser, battery |
-| `tests/test_phone_input.py` | 47 | PhoneInput: message parsing, event map (incl. digit_0..9), queue, state broadcast |
-| `app/flutter/.../test/` | 17 | Flutter: HUD state, panel state, chat messages, unmodifiable list |
+| `tests/test_phone_input.py` | 51 | PhoneInput: message parsing, event map (incl. digit_0..9), queue, state broadcast, biometric, device_list |
+| `app/flutter/.../test/` | 24 | Flutter: HUD state, panel state, chat messages, device list, DeviceInfo, unmodifiable list |
 
 ### BLE Gauntlet Input Stub
 **Estado:** Completado (stub — necesita hardware ESP32 para test real)
@@ -354,7 +355,7 @@ code /tmp/scouterhud_live.png
 | Servidor AWS | `qrlink://v1/srv-prod-01/mqtt/localhost:1883?auth=token&t=infra/prod/server01` | token |
 
 ### Phase A1 — ScouterApp: Flutter MVP
-**Estado:** v0.3.0 — Sistema de paneles gesture-based completado
+**Estado:** v0.4.0 — Auth biométrica + device list
 
 - [x] Flutter app con pantalla de control (D-pad + confirm + cancel)
 - [x] **QR scanning nativo** (mobile_scanner 6.0.11 — cámara del celular)
@@ -377,11 +378,19 @@ code /tmp/scouterhud_live.png
 - [x] **Tema visual**: fondo navy #1A1A2E, colores por función (red=cancel, blue=home, yellow=numpad, green=confirm, orange=url, purple=AI, cyan=keyboard)
 - [x] D-pad ◀▶ → prev/next device en streaming (Python backend, sin botones duplicados)
 - [x] Protocolo WebSocket extendido: alpha_key (con value), alpha_backspace/enter/shift, ai_chat, ai_response, biometric_auth
-- [x] 17 tests Flutter + 163 tests Python passing
-- [ ] **Autenticación biométrica** (FaceID/huella + Keychain/Keystore) — botón listo, implementación pendiente
-- [ ] Pantalla device list en la app
+- [x] 24 tests Flutter + 167 tests Python passing (191 total)
+- [x] **Autenticación biométrica** (FaceID/huella vía `local_auth`) — bypass PIN cuando biometric OK
+- [ ] **AI Chat con LLM local** — UI lista, backend bloqueado (ver nota abajo)
+- [x] **Pantalla device list** — lista de dispositivos con BACK, CONNECT, filas tocables; auto-switch desde HUD
 - [ ] Comunicación BLE con el HUD (actualmente usa WebSocket vía WiFi)
 - [ ] Pairing flow (escanear QR del HUD)
+
+> **Nota AI/LLM (Feb 2026):** Se intentó inferencia local en el phone con dos packages:
+> 1. `llama_cpp_dart` — no funcionó (primera sesión)
+> 2. `flutter_llama` v1.1.2 — crashes nativos en llama.cpp (segfault en C++, sin fix posible desde Dart)
+>
+> **Requisito firme:** el LLM debe correr en el phone (no cloud, no LAN). Datos de salud son PII/PHI — enviarlos a APIs externas viola compliance (HIPAA, etc.).
+> El UI de chat ya existe y funciona (stub echo). Reintentar cuando el tooling Flutter+llama.cpp madure.
 
 **APK releases:**
 
@@ -390,6 +399,7 @@ code /tmp/scouterhud_live.png
 | v0.1.3 | 2026-02-17 | Primera versión funcional: WebSocket, QR scan, D-pad, PIN +/− | 67.9MB |
 | v0.2.0 | 2026-02-17 | UI/UX: D-pad grande, numpad directo, márgenes, layout reorganizado | 67.9MB |
 | v0.3.0 | 2026-02-20 | Panel system: QWERTY keyboard, AI Chat, fingerprint button, swipe gestures, dark navy theme | 68.5MB |
+| v0.4.0 | 2026-02-20 | Auth biométrica (local_auth), device list screen con BACK/CONNECT/tap, 191 tests | 66MB |
 
 **Archivos Flutter:**
 
@@ -405,14 +415,15 @@ code /tmp/scouterhud_live.png
 | `lib/widgets/numpad_widget.dart` | Teclado numérico 4x3 para PIN entry | Listo |
 | `lib/widgets/alpha_keyboard_widget.dart` | QWERTY: SPACE(80px)+SHIFT izq, 3 filas centro, ENTER(80px) der, ⌫ en fila 3 | Listo |
 | `lib/widgets/action_button_grid.dart` | Lista vertical: CANCEL, HOME, QR SCAN, URL | Listo |
-| `lib/widgets/fingerprint_button.dart` | Botón biométrico 88x180px con icono fingerprint | Listo |
+| `lib/screens/device_list_screen.dart` | Pantalla device list: BACK, CONNECT, filas tocables, auto-switch | Listo |
+| `lib/widgets/fingerprint_button.dart` | Auth biométrica real vía local_auth (FaceID/huella), estados visuales | Listo |
 | `lib/widgets/ai_chat_button.dart` | Botón púrpura "◆ AI CHAT" debajo del D-pad | Listo |
 | `lib/widgets/edge_hint_widget.dart` | Líneas verticales con label rotado (NUMPAD/ALPHA) | Listo |
 | `lib/widgets/gesture_guide_bar.dart` | Barra inferior: "◁ NUMPAD" / "ALPHA ▷" | Listo |
 | `lib/widgets/status_bar_widget.dart` | 3 columnas: conexión, titulo+device, modo activo | Listo |
-| `lib/services/websocket_service.dart` | WebSocket client + sendAlphaKey + sendAiChat + ai_response handler | Listo |
-| `lib/models/hud_state.dart` | HudConnection: state, numericMode, activePanel, chatMessages | Listo |
-| `lib/models/panel_state.dart` | Enum: base, numpad, alpha, aiChat | Listo |
+| `lib/services/websocket_service.dart` | WebSocket client + sendAlphaKey + sendAiChat + sendBiometricAuth + device_list handler | Listo |
+| `lib/models/hud_state.dart` | HudConnection: state, numericMode, activePanel, chatMessages, deviceList, DeviceInfo | Listo |
+| `lib/models/panel_state.dart` | Enum: base, numpad, alpha, aiChat, deviceList | Listo |
 | `lib/theme/scouter_colors.dart` | Constantes de color: background, surface, red..cyan, text, border | Listo |
 
 **Build pipeline:**
@@ -564,7 +575,7 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m scouterhud.main 
 Luego abrir `/tmp/scouterhud_live.png` en VSCode para ver el HUD en vivo (`code /tmp/scouterhud_live.png`).
 
 Para phone control:
-- **ScouterApp (recomendado):** Instalar APK en Android (`scouter_app_v0.3.3.apk`), ingresar `<tu-ip>:8765`
+- **ScouterApp (recomendado):** Instalar APK en Android (`scouter-app-v0.4.0.apk`), ingresar `<tu-ip>:8765`
 - **Web fallback:** Abrir `http://localhost:8765/` (o `http://<tu-ip>:8765/` desde celular en la misma WiFi)
 
 **Controles en terminal (modo preview):** `w/a/s/d` = navegar, `enter` = confirmar, `x` = cancelar, `h` = lista de dispositivos, `n/p` = cambiar dispositivo, `q` = salir.

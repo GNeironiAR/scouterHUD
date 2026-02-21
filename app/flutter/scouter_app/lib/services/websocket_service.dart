@@ -51,6 +51,14 @@ class WebSocketService {
     _send({'type': 'qrlink', 'url': url});
   }
 
+  void sendBiometricAuth({required bool success}) {
+    _send({
+      'type': 'input',
+      'event': 'biometric_auth',
+      'value': success ? 'success' : 'failed',
+    });
+  }
+
   void _send(Map<String, dynamic> msg) {
     if (_channel != null && hudConnection.isConnected) {
       _channel!.sink.add(jsonEncode(msg));
@@ -98,6 +106,14 @@ class WebSocketService {
         if (message.isNotEmpty) {
           hudConnection.addChatMessage('ai', message);
         }
+      } else if (type == 'device_list') {
+        final devicesJson = msg['devices'] as List<dynamic>? ?? [];
+        final devices = devicesJson
+            .map((d) => DeviceInfo.fromJson(d as Map<String, dynamic>))
+            .toList();
+        final selected = msg['selected'] as int? ?? 0;
+        final activeId = msg['active'] as String? ?? '';
+        hudConnection.updateDeviceList(devices, selected, activeId);
       }
     } catch (_) {
       // Ignore malformed messages

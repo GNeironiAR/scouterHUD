@@ -3,4 +3,5 @@ enum PanelState {
   numpad,
   alpha,
   aiChat,
+  deviceList,
 }

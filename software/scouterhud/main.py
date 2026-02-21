@@ -182,6 +182,27 @@ class ScouterHUD:
             elif new_state == AppState.ERROR:
                 kwargs["error"] = self._error_msg
             self._phone_input.send_state(new_state.name.lower(), **kwargs)
+            if new_state == AppState.DEVICE_LIST:
+                self._send_device_list()
+
+    def _send_device_list(self) -> None:
+        """Send current device list to phone app."""
+        if not self._phone_input:
+            return
+        devices = self.connection.known_devices
+        active = self.connection.active_device
+        active_id = active.id if active else ""
+        device_data = []
+        for d in devices:
+            device_data.append({
+                "id": d.id,
+                "name": d.name or d.id,
+                "type": d.type or "unknown",
+                "auth": d.auth or "open",
+            })
+        self._phone_input.send_device_list(
+            device_data, self._device_list_index, active_id
+        )
 
     def _initiate_connection(self, link: DeviceLink) -> None:
         """Start connection flow: check auth, then connect."""
@@ -283,6 +304,19 @@ class ScouterHUD:
         if not self._pin_entry or not self._pending_link:
             return
 
+        # Biometric auth bypasses PIN
+        if event.type == EventType.BIOMETRIC_AUTH:
+            if event.value == "success":
+                log.info(f"Biometric auth accepted for {self._pending_link.id}")
+                self.input.set_numeric_mode(False)
+                link = self._pending_link
+                self._pin_entry = None
+                self._pending_link = None
+                self._do_connect(link)
+            else:
+                log.warning("Biometric auth failed, PIN entry continues")
+            return
+
         self._pin_entry.handle_event(event)
 
         if self._pin_entry.was_cancelled:
@@ -334,9 +368,6 @@ class ScouterHUD:
                 self._device_list_index = 0
                 self._set_state(AppState.DEVICE_LIST)
 
-        elif event.type == EventType.BIOMETRIC_AUTH:
-            log.info("Biometric auth requested (not yet implemented)")
-
         elif event.type == EventType.CANCEL:
             self.connection.disconnect()
             self._set_state(AppState.SCANNING)
@@ -347,9 +378,11 @@ class ScouterHUD:
 
         if event.type == EventType.NAV_UP:
             self._device_list_index = max(0, self._device_list_index - 1)
+            self._send_device_list()
 
         elif event.type == EventType.NAV_DOWN:
             self._device_list_index = min(len(devices) - 1, self._device_list_index + 1)
+            self._send_device_list()
 
         elif event.type == EventType.CONFIRM:
             if devices:

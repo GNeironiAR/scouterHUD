@@ -12,6 +12,29 @@ enum HudState {
   error,
 }
 
+class DeviceInfo {
+  final String id;
+  final String name;
+  final String type;
+  final String auth;
+
+  DeviceInfo({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.auth,
+  });
+
+  factory DeviceInfo.fromJson(Map<String, dynamic> json) {
+    return DeviceInfo(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      type: json['type'] as String? ?? 'unknown',
+      auth: json['auth'] as String? ?? 'open',
+    );
+  }
+}
+
 class ChatMessage {
   final String sender; // "user" or "ai"
   final String text;
@@ -32,6 +55,9 @@ class HudConnection extends ChangeNotifier {
   bool _numericMode = false;
   PanelState _activePanel = PanelState.base;
   final List<ChatMessage> _chatMessages = [];
+  List<DeviceInfo> _deviceList = [];
+  int _deviceListSelected = 0;
+  String _activeDeviceId = '';
 
   HudState get state => _state;
   bool get isConnected => _isConnected;
@@ -40,6 +66,9 @@ class HudConnection extends ChangeNotifier {
   bool get numericMode => _numericMode;
   PanelState get activePanel => _activePanel;
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
+  List<DeviceInfo> get deviceList => List.unmodifiable(_deviceList);
+  int get deviceListSelected => _deviceListSelected;
+  String get activeDeviceId => _activeDeviceId;
 
   void updateState(String stateName, {String? device, String? error}) {
     _state = _parseState(stateName);
@@ -78,6 +107,17 @@ class HudConnection extends ChangeNotifier {
 
   void clearChatMessages() {
     _chatMessages.clear();
+    notifyListeners();
+  }
+
+  void updateDeviceList(
+    List<DeviceInfo> devices,
+    int selected,
+    String activeId,
+  ) {
+    _deviceList = devices;
+    _deviceListSelected = selected;
+    _activeDeviceId = activeId;
     notifyListeners();
   }
 

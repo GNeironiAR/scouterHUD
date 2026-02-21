@@ -168,6 +168,20 @@ class TestMessageParsing:
         e = self.pi._parse_message(None)
         assert e is None
 
+    def test_biometric_auth_with_value(self):
+        msg = '{"type": "input", "event": "biometric_auth", "value": "success"}'
+        e = self.pi._parse_message(msg)
+        assert e is not None
+        assert e.type == EventType.BIOMETRIC_AUTH
+        assert e.value == "success"
+
+    def test_biometric_auth_failed_value(self):
+        msg = '{"type": "input", "event": "biometric_auth", "value": "failed"}'
+        e = self.pi._parse_message(msg)
+        assert e is not None
+        assert e.type == EventType.BIOMETRIC_AUTH
+        assert e.value == "failed"
+
 
 class TestEventMap:
     """Test that the event map covers all expected inputs."""
@@ -280,3 +294,29 @@ class TestStateSerialization:
 
         pi.numeric_mode = False
         assert captured[1] == {"type": "mode", "numeric": False}
+
+    def test_send_device_list(self):
+        pi = PhoneInput()
+        captured = []
+        pi._broadcast = lambda msg: captured.append(msg)
+
+        devices = [
+            {"id": "dev-1", "name": "Device 1", "type": "monitor", "auth": "pin"},
+            {"id": "dev-2", "name": "Device 2", "type": "sensor", "auth": "open"},
+        ]
+        pi.send_device_list(devices, 0, "dev-1")
+        assert len(captured) == 1
+        assert captured[0]["type"] == "device_list"
+        assert len(captured[0]["devices"]) == 2
+        assert captured[0]["selected"] == 0
+        assert captured[0]["active"] == "dev-1"
+
+    def test_send_device_list_empty(self):
+        pi = PhoneInput()
+        captured = []
+        pi._broadcast = lambda msg: captured.append(msg)
+
+        pi.send_device_list([], 0, "")
+        assert captured[0]["devices"] == []
+        assert captured[0]["selected"] == 0
+        assert captured[0]["active"] == ""

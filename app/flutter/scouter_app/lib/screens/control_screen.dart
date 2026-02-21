@@ -14,6 +14,7 @@ import '../widgets/gesture_guide_bar.dart';
 import '../widgets/status_bar_widget.dart';
 import 'ai_chat_screen.dart';
 import 'alpha_keyboard_screen.dart';
+import 'device_list_screen.dart';
 import 'numpad_screen.dart';
 import 'qr_scanner_screen.dart';
 
@@ -27,8 +28,9 @@ class ControlScreen extends StatefulWidget {
 }
 
 class _ControlScreenState extends State<ControlScreen> {
-  // Track previous numericMode to only react to transitions
+  // Track previous modes to only react to transitions
   bool _prevNumericMode = false;
+  bool _prevDeviceListMode = false;
 
   void _openNumpad() => _syncPanelState(PanelState.numpad);
   void _closeNumpad() => _syncPanelState(PanelState.base);
@@ -48,17 +50,33 @@ class _ControlScreenState extends State<ControlScreen> {
       backgroundColor: ScouterColors.background,
       body: Consumer<HudConnection>(
         builder: (context, hud, _) {
-          // Only auto-open/close numpad on numericMode TRANSITIONS
+          // Auto-switch panels on state transitions
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            // Numpad auto-open/close
             if (hud.numericMode && !_prevNumericMode) {
               _openNumpad();
             } else if (!hud.numericMode && _prevNumericMode) {
               _closeNumpad();
             }
             _prevNumericMode = hud.numericMode;
+
+            // Device list auto-open/close
+            final isDeviceList = hud.state == HudState.deviceList;
+            if (isDeviceList && !_prevDeviceListMode) {
+              _syncPanelState(PanelState.deviceList);
+            } else if (!isDeviceList && _prevDeviceListMode) {
+              _syncPanelState(PanelState.base);
+            }
+            _prevDeviceListMode = isDeviceList;
           });
 
           // Full-screen overlays
+          if (hud.activePanel == PanelState.deviceList) {
+            return _wrapWithStatusBar(
+              DeviceListScreen(wsService: widget.wsService),
+            );
+          }
+
           if (hud.activePanel == PanelState.aiChat) {
             return _wrapWithStatusBar(
               AiChatScreen(
@@ -210,8 +228,11 @@ class _ControlScreenState extends State<ControlScreen> {
                   Padding(
                     padding: const EdgeInsets.only(right: 40),
                     child: FingerprintButton(
-                      onPressed: () =>
-                          widget.wsService.sendEvent('biometric_auth'),
+                      onResult: (success) {
+                        if (success) {
+                          widget.wsService.sendBiometricAuth(success: true);
+                        }
+                      },
                     ),
                   ),
                   // Right edge hint

@@ -165,6 +165,17 @@ class PhoneInput(InputBackend):
         """Send AI response message to all connected phones."""
         self._broadcast({"type": "ai_response", "message": message})
 
+    def send_device_list(
+        self, devices: list[dict], selected: int, active_id: str
+    ) -> None:
+        """Send device list data to all connected phones."""
+        self._broadcast({
+            "type": "device_list",
+            "devices": devices,
+            "selected": selected,
+            "active": active_id,
+        })
+
     # ── Private ──
 
     def _load_html(self) -> None:

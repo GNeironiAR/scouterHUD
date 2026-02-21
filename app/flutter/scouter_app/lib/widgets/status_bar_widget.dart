@@ -94,6 +94,8 @@ class StatusBarWidget extends StatelessWidget {
         return 'KEYBOARD';
       case PanelState.aiChat:
         return 'AI CHAT';
+      case PanelState.deviceList:
+        return 'DEVICES';
     }
   }
 
@@ -107,6 +109,8 @@ class StatusBarWidget extends StatelessWidget {
         return ScouterColors.cyan;
       case PanelState.aiChat:
         return ScouterColors.purple;
+      case PanelState.deviceList:
+        return ScouterColors.blue;
     }
   }
 }
