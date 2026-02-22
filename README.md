@@ -5,8 +5,8 @@
 An open-source wearable ecosystem that lets you see any device's data floating in front of your eye in real time. Scan a QR code with your phone, authenticate with your fingerprint, and live data appears in your HUD. No screens. No touching. Hands free. **No camera on your face** — privacy by design.
 
 <p align="center">
-  <img src="docs/Gemini_Generated_Image_rrk36lrrk36lrrk3.png" width="280" alt="ScouterHUD headset concept"/>
-  <img src="docs/Gemini_Generated_Image_i4uk7xi4uk7xi4uk.png" width="280" alt="Medical use case"/>
+  <img src="docs/nurse_1.jpeg" width="280" alt="Nurse using ScouterHUD — vitals in line of sight"/>
+  <img src="docs/nurse_2.jpeg" width="280" alt="ScouterHUD medical use case — hands on patient"/>
   <img src="docs/Gemini_Generated_Image_yv7opyyv7opyyv7o.png" width="280" alt="Vehicle HUD use case"/>
 </p>
 
