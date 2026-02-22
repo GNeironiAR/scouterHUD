@@ -60,12 +60,17 @@ class TestParseQrlinkUrl:
             assert link is not None
             assert link.auth == auth
 
-    def test_unsupported_auth_defaults_to_open(self):
+    def test_unsupported_auth_rejects_fail_closed(self):
+        """Phase S0: unknown auth methods are rejected, not defaulted to open."""
         url = "qrlink://v1/dev/mqtt/host:1883?auth=foobar"
         link = parse_qrlink_url(url)
+        assert link is None
 
-        assert link is not None
-        assert link.auth == "open"
+    def test_url_too_long_rejected(self):
+        """Phase S0: URLs exceeding max length are rejected."""
+        url = "qrlink://v1/dev/mqtt/host:1883?t=" + "a" * 500
+        link = parse_qrlink_url(url)
+        assert link is None
 
     def test_unsupported_proto_returns_none(self):
         url = "qrlink://v1/dev/ftp/host:21"

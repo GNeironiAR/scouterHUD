@@ -71,6 +71,11 @@ def parse_qrlink_url(raw: str) -> DeviceLink | None:
         log.debug(f"Not a qrlink URL: {raw[:40]}")
         return None
 
+    # URL length validation (Phase S0)
+    if len(raw) > 512:
+        log.warning(f"QR-Link URL too long ({len(raw)} chars), rejected")
+        return None
+
     try:
         # urlparse treats qrlink as scheme
         parsed = urlparse(raw)
@@ -127,8 +132,8 @@ def parse_qrlink_url(raw: str) -> DeviceLink | None:
         topic = params.get("t", [None])[0]
 
         if auth not in SUPPORTED_AUTH:
-            log.warning(f"Unknown auth method: {auth}, defaulting to 'open'")
-            auth = "open"
+            log.warning(f"Unknown auth method: {auth}, rejecting (fail-closed)")
+            return None
 
         link = DeviceLink(
             version=version,

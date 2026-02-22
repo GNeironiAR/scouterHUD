@@ -183,6 +183,42 @@ class TestMessageParsing:
         assert e.value == "failed"
 
 
+class TestInputValidation:
+    """Tests for input validation (Phase S0)."""
+
+    def setup_method(self):
+        self.pi = PhoneInput()
+
+    def test_qrlink_url_too_long_rejected(self):
+        """URLs exceeding MAX_QRLINK_URL_LENGTH are rejected."""
+        url = "qrlink://v1/dev/mqtt/host:1883?t=" + "a" * 500
+        msg = json.dumps({"type": "qrlink", "url": url})
+        e = self.pi._parse_message(msg)
+        assert e is None
+
+    def test_qrlink_url_within_limit_accepted(self):
+        url = "qrlink://v1/dev/mqtt/host:1883?t=short"
+        msg = json.dumps({"type": "qrlink", "url": url})
+        e = self.pi._parse_message(msg)
+        assert e is not None
+        assert e.type == EventType.QRLINK_RECEIVED
+
+    def test_ai_chat_too_long_truncated(self):
+        """AI chat messages exceeding MAX_AI_CHAT_LENGTH are truncated."""
+        long_msg = "x" * 2000
+        msg = json.dumps({"type": "ai_chat", "message": long_msg})
+        e = self.pi._parse_message(msg)
+        assert e is not None
+        assert e.type == EventType.AI_CHAT_MESSAGE
+        assert len(e.value) == 1024  # MAX_AI_CHAT_LENGTH
+
+    def test_ai_chat_within_limit_accepted(self):
+        msg = json.dumps({"type": "ai_chat", "message": "hello"})
+        e = self.pi._parse_message(msg)
+        assert e is not None
+        assert e.value == "hello"
+
+
 class TestEventMap:
     """Test that the event map covers all expected inputs."""
 

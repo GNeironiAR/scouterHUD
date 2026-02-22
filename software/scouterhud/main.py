@@ -95,7 +95,7 @@ class ScouterHUD:
 
         # Core systems
         self.connection = ConnectionManager()
-        self.auth = AuthManager()
+        self.auth = AuthManager(pins=self._load_demo_pins())
 
         # State
         self._state = AppState.SCANNING
@@ -111,6 +111,35 @@ class ScouterHUD:
 
         # Device list
         self._device_list_index = 0
+
+    @staticmethod
+    def _load_demo_pins() -> dict[str, str]:
+        """Load device PINs from emulator config.yaml (if available)."""
+        from pathlib import Path
+
+        config_path = Path(__file__).resolve().parents[2] / "emulator" / "config.yaml"
+        if not config_path.exists():
+            log.debug("No emulator config.yaml found, no demo PINs loaded")
+            return {}
+
+        try:
+            import yaml
+        except ImportError:
+            log.debug("PyYAML not available, no demo PINs loaded")
+            return {}
+
+        try:
+            data = yaml.safe_load(config_path.read_text())
+            pins = {}
+            for dev in data.get("devices", []):
+                if dev.get("pin"):
+                    pins[dev["id"]] = str(dev["pin"])
+            if pins:
+                log.info(f"Loaded {len(pins)} device PINs from emulator config")
+            return pins
+        except Exception as e:
+            log.warning(f"Failed to load emulator config: {e}")
+            return {}
 
     # ── Public entry points ──
 

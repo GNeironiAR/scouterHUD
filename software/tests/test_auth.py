@@ -1,11 +1,21 @@
 """Tests for auth manager and PIN entry."""
 
+import time
+
 import pytest
 
-from scouterhud.auth.auth_manager import AuthManager, AuthResult
+from scouterhud.auth.auth_manager import (
+    AuthManager, AuthResult, LOCKOUT_SECONDS, MAX_PIN_ATTEMPTS,
+)
 from scouterhud.auth.pin_entry import PinEntry
 from scouterhud.input.events import EventType, InputEvent
 from scouterhud.qrlink.protocol import DeviceLink
+
+
+DEMO_PINS = {
+    "monitor-bed-12": "1234",
+    "press-machine-07": "5678",
+}
 
 
 def _make_link(**kwargs):
@@ -47,34 +57,43 @@ class TestAuthManager:
         assert am.get_auth_type(_make_link(auth="open")) == "open"
         assert am.get_auth_type(_make_link(auth="token")) == "token"
 
-    def test_validate_demo_pin_correct(self):
-        am = AuthManager()
+    def test_validate_pin_correct(self):
+        am = AuthManager(pins=DEMO_PINS)
         link = _make_link(id="monitor-bed-12", auth="pin")
         result = am.validate_pin(link, "1234")
         assert result.success is True
         assert result.credential == "1234"
 
-    def test_validate_demo_pin_wrong(self):
-        am = AuthManager()
+    def test_validate_pin_wrong(self):
+        am = AuthManager(pins=DEMO_PINS)
         link = _make_link(id="monitor-bed-12", auth="pin")
         result = am.validate_pin(link, "0000")
         assert result.success is False
-        assert result.error == "Invalid PIN"
+        assert "Invalid PIN" in result.error
 
     def test_validate_second_demo_pin(self):
-        am = AuthManager()
+        am = AuthManager(pins=DEMO_PINS)
         link = _make_link(id="press-machine-07", auth="pin")
         result = am.validate_pin(link, "5678")
         assert result.success is True
 
-    def test_unknown_device_accepts_any_pin(self):
-        am = AuthManager()
+    def test_unknown_device_rejects_pin(self):
+        """Phase S0: unknown devices are rejected (no 'accept any' fallback)."""
+        am = AuthManager(pins=DEMO_PINS)
         link = _make_link(id="unknown-device", auth="pin")
         result = am.validate_pin(link, "9999")
-        assert result.success is True
+        assert result.success is False
+        assert "No PIN configured" in result.error
 
-    def test_stored_pin_overrides_demo(self):
+    def test_no_pins_configured_rejects_all(self):
+        """AuthManager with no pins rejects everything."""
         am = AuthManager()
+        link = _make_link(id="monitor-bed-12", auth="pin")
+        result = am.validate_pin(link, "1234")
+        assert result.success is False
+
+    def test_stored_pin_overrides_config(self):
+        am = AuthManager(pins=DEMO_PINS)
         am.store_pin("monitor-bed-12", "4321")
         link = _make_link(id="monitor-bed-12", auth="pin")
 
@@ -94,6 +113,82 @@ class TestAuthManager:
         link = _make_link(id="srv-01", auth="token")
         result = am.validate_token(link)
         assert result.success is False
+
+
+class TestPinRateLimiting:
+    """Tests for PIN rate limiting (Phase S0)."""
+
+    def test_failed_attempts_counted(self):
+        am = AuthManager(pins={"dev-1": "1234"})
+        link = _make_link(id="dev-1", auth="pin")
+
+        result = am.validate_pin(link, "0000")
+        assert result.success is False
+        assert f"{MAX_PIN_ATTEMPTS - 1} attempts left" in result.error
+
+    def test_lockout_after_max_attempts(self):
+        am = AuthManager(pins={"dev-1": "1234"})
+        link = _make_link(id="dev-1", auth="pin")
+
+        for i in range(MAX_PIN_ATTEMPTS):
+            result = am.validate_pin(link, "0000")
+            assert result.success is False
+
+        # Should now be locked out
+        assert am.is_locked_out("dev-1") is True
+
+        # Next attempt should fail with lockout message
+        result = am.validate_pin(link, "1234")  # even correct PIN
+        assert result.success is False
+        assert "Locked out" in result.error
+
+    def test_successful_pin_clears_attempts(self):
+        am = AuthManager(pins={"dev-1": "1234"})
+        link = _make_link(id="dev-1", auth="pin")
+
+        # Fail a few times
+        for _ in range(3):
+            am.validate_pin(link, "0000")
+
+        # Succeed
+        result = am.validate_pin(link, "1234")
+        assert result.success is True
+
+        # Counter should be reset — next failure starts from 0
+        result = am.validate_pin(link, "0000")
+        assert f"{MAX_PIN_ATTEMPTS - 1} attempts left" in result.error
+
+    def test_lockout_per_device(self):
+        am = AuthManager(pins={"dev-1": "1111", "dev-2": "2222"})
+        link1 = _make_link(id="dev-1", auth="pin")
+        link2 = _make_link(id="dev-2", auth="pin")
+
+        # Lock out dev-1
+        for _ in range(MAX_PIN_ATTEMPTS):
+            am.validate_pin(link1, "0000")
+
+        assert am.is_locked_out("dev-1") is True
+        assert am.is_locked_out("dev-2") is False
+
+        # dev-2 should still work
+        result = am.validate_pin(link2, "2222")
+        assert result.success is True
+
+    def test_lockout_remaining_seconds(self):
+        am = AuthManager(pins={"dev-1": "1234"})
+        link = _make_link(id="dev-1", auth="pin")
+
+        for _ in range(MAX_PIN_ATTEMPTS):
+            am.validate_pin(link, "0000")
+
+        remaining = am.get_lockout_remaining("dev-1")
+        assert remaining > 0
+        assert remaining <= LOCKOUT_SECONDS
+
+    def test_no_lockout_when_not_locked(self):
+        am = AuthManager(pins={"dev-1": "1234"})
+        assert am.is_locked_out("dev-1") is False
+        assert am.get_lockout_remaining("dev-1") == 0
 
 
 class TestPinEntry:

@@ -13,6 +13,7 @@ import json
 import logging
 import socket
 import threading
+import time
 from collections import deque
 from http import HTTPStatus
 from pathlib import Path
@@ -57,6 +58,13 @@ _EVENT_MAP: dict[str, EventType] = {
     "scan_qr": EventType.SCAN_QR,
     "quit": EventType.QUIT,
 }
+
+
+# Input validation constants (Phase S0)
+MAX_MESSAGE_LENGTH = 4096      # bytes per WebSocket message
+MAX_QRLINK_URL_LENGTH = 512    # chars for qrlink:// URLs
+MAX_AI_CHAT_LENGTH = 1024      # chars for AI chat messages
+MAX_MESSAGES_PER_SECOND = 30   # per client rate limit
 
 
 def _find_html_path() -> Path:
@@ -110,6 +118,8 @@ class PhoneInput(InputBackend):
         self._clients: set = set()
         self._html_bytes: bytes = b""
         self._html_path = Path(html_path) if html_path else _find_html_path()
+        # Per-client rate limiting: websocket → list of timestamps
+        self._client_msg_times: dict[int, deque] = {}
 
     @property
     def name(self) -> str:
@@ -240,6 +250,19 @@ class PhoneInput(InputBackend):
             headers = Headers()
             headers["Content-Type"] = "text/html; charset=utf-8"
             headers["Cache-Control"] = "no-cache"
+            # Security headers (Phase S0)
+            headers["X-Content-Type-Options"] = "nosniff"
+            headers["X-Frame-Options"] = "DENY"
+            headers["X-XSS-Protection"] = "1; mode=block"
+            headers["Referrer-Policy"] = "no-referrer"
+            headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'unsafe-inline'; "
+                "style-src 'unsafe-inline'; "
+                "connect-src 'self' ws: wss:; "
+                "img-src 'self' data:; "
+                "frame-ancestors 'none'"
+            )
             return Response(HTTPStatus.OK, "OK", headers, self._html_bytes)
         # Return None for other paths
         return None
@@ -248,10 +271,27 @@ class PhoneInput(InputBackend):
         """Handle a WebSocket connection from a phone."""
         self._clients.add(websocket)
         remote = websocket.remote_address
+        client_id = id(websocket)
+        self._client_msg_times[client_id] = deque(maxlen=MAX_MESSAGES_PER_SECOND)
         log.info(f"Phone connected: {remote}")
 
         try:
             async for raw in websocket:
+                # Input validation: message size limit
+                if len(raw) > MAX_MESSAGE_LENGTH:
+                    log.warning(f"Phone {remote}: message too large ({len(raw)} bytes), dropped")
+                    continue
+
+                # Rate limiting: drop messages if too fast
+                now = time.monotonic()
+                times = self._client_msg_times.get(client_id)
+                if times is not None and len(times) >= MAX_MESSAGES_PER_SECOND:
+                    if now - times[0] < 1.0:
+                        log.warning(f"Phone {remote}: rate limit exceeded, dropping message")
+                        continue
+                if times is not None:
+                    times.append(now)
+
                 event = self._parse_message(raw)
                 if event:
                     self._queue.append(event)
@@ -260,6 +300,7 @@ class PhoneInput(InputBackend):
             log.debug(f"Phone disconnected: {remote} ({e})")
         finally:
             self._clients.discard(websocket)
+            self._client_msg_times.pop(client_id, None)
             log.info(f"Phone disconnected: {remote}")
 
     def _parse_message(self, raw: str) -> InputEvent | None:
@@ -284,6 +325,9 @@ class PhoneInput(InputBackend):
 
         elif msg_type == "qrlink":
             url = data.get("url", "")
+            if len(url) > MAX_QRLINK_URL_LENGTH:
+                log.warning(f"QR-Link URL too long ({len(url)} chars), rejected")
+                return None
             if url.startswith("qrlink://"):
                 return InputEvent(
                     type=EventType.QRLINK_RECEIVED,
@@ -293,6 +337,9 @@ class PhoneInput(InputBackend):
 
         elif msg_type == "ai_chat":
             message = data.get("message", "")
+            if len(message) > MAX_AI_CHAT_LENGTH:
+                log.warning(f"AI chat message too long ({len(message)} chars), truncated")
+                message = message[:MAX_AI_CHAT_LENGTH]
             if message:
                 return InputEvent(
                     type=EventType.AI_CHAT_MESSAGE,

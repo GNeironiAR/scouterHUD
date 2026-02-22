@@ -1,6 +1,6 @@
 # ScouterHUD — Estado del Proyecto
 
-**Última actualización:** 2026-02-20
+**Última actualización:** 2026-02-22
 
 ---
 
@@ -205,10 +205,10 @@ Software principal del ScouterHUD con display emulado en desktop.
 
 | Archivo | Descripción | Estado |
 |---------|-------------|--------|
-| `software/scouterhud/auth/auth_manager.py` | AuthManager: check auth level, validate PIN, store tokens | Listo |
+| `software/scouterhud/auth/auth_manager.py` | AuthManager: PIN validation, rate limiting (5 attempts → 15 min lockout), PINs from config | Listo |
 | `software/scouterhud/auth/pin_entry.py` | PinEntry: UI interactiva de 4 dígitos, render 240x240 | Listo |
 
-**PINs de demo (emulador):**
+**PINs de demo:** Cargados desde `emulator/config.yaml` (no hardcoded en código fuente).
 
 | Device ID | PIN | Auth type |
 |-----------|-----|-----------|
@@ -218,7 +218,7 @@ Software principal del ScouterHUD con display emulado en desktop.
 | `srv-prod-01` | — | token |
 | `thermo-kitchen` | — | open |
 
-**Flujo:** `--auth pin` → pantalla PIN → navegar dígitos con w/s (teclado) o numpad directo (app) → enter/SEND para enviar → si OK conecta, si no muestra error y permite reintentar.
+**Flujo:** `--auth pin` → pantalla PIN → navegar dígitos con w/s (teclado) o numpad directo (app) → enter/SEND para enviar → si OK conecta, si no muestra error con intentos restantes → 5 fallos = lockout 15 min.
 
 ### Multi-device Switching
 **Estado:** Completado
@@ -252,7 +252,7 @@ Software principal del ScouterHUD con display emulado en desktop.
 ### Unit Tests
 **Estado:** Completado
 
-167 tests Python + 24 tests Flutter (191 total) cubriendo todos los módulos core. Python tests corren en <0.3s sin hardware ni broker.
+179 tests Python + 24 tests Flutter (203 total) cubriendo todos los módulos core. Python tests corren en <0.3s sin hardware ni broker.
 
 ```bash
 cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
@@ -260,13 +260,13 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 
 | Test file | Tests | Cubre |
 |-----------|-------|-------|
-| `tests/test_protocol.py` | 21 | Parsing QR-Link URLs, DeviceLink, metadata update, edge cases |
-| `tests/test_auth.py` | 26 | AuthManager (PIN/token), PinEntry (UI logic, render, retry) |
+| `tests/test_protocol.py` | 23 | Parsing QR-Link URLs, DeviceLink, metadata update, fail-closed auth, URL length limit |
+| `tests/test_auth.py` | 34 | AuthManager (PIN/token), PinEntry (UI logic, render, retry), rate limiting (lockout, per-device, reset) |
 | `tests/test_renderer.py` | 15 | 6 layouts, status screens, device list, alertas, edge cases |
 | `tests/test_input.py` | 13 | EventType, InputEvent, InputManager con mock backends |
 | `tests/test_connection.py` | 11 | Device history, switching, dedup, mock MQTT transport |
 | `tests/test_gauntlet.py` | 21 | Pad→event translation (nav + numeric), BLE notification parser, battery |
-| `tests/test_phone_input.py` | 51 | PhoneInput: message parsing, event map (incl. digit_0..9), queue, state broadcast, biometric, device_list |
+| `tests/test_phone_input.py` | 55 | PhoneInput: message parsing, event map, queue, state broadcast, biometric, device_list, input validation |
 | `app/flutter/.../test/` | 24 | Flutter: HUD state, panel state, chat messages, device list, DeviceInfo, unmodifiable list |
 
 ### BLE Gauntlet Input Stub
@@ -457,6 +457,32 @@ cd ~/scouterHUD/app/flutter/scouter_app && ~/flutter/bin/flutter test
 netsh interface portproxy add v4tov4 listenport=8765 listenaddress=0.0.0.0 connectport=8765 connectaddress=127.0.0.1
 New-NetFirewallRule -DisplayName "ScouterHUD WS" -Direction Inbound -LocalPort 8765 -Protocol TCP -Action Allow
 ```
+
+---
+
+## Phase S0 — Security Quick Wins
+**Estado:** Completado
+
+Hardening de seguridad sin cambios de arquitectura. Ver [security-model.md](security-model.md) para el modelo completo.
+
+- [x] **Eliminado "accept any PIN" fallback** — dispositivos sin PIN configurado son rechazados
+- [x] **PINs removidos del código fuente** — cargados desde `emulator/config.yaml` via constructor
+- [x] **Rate limiting de PIN** — 5 intentos fallidos → lockout 15 min por dispositivo
+- [x] **Validación de input WebSocket** — mensajes >4KB rechazados, rate limit 30 msg/s por cliente
+- [x] **Validación de URLs** — QR-Link URLs >512 chars rechazadas
+- [x] **Validación de AI chat** — mensajes >1024 chars truncados
+- [x] **Fail-closed para auth desconocido** — `?auth=foobar` rechaza la URL (antes defaulteaba a open)
+- [x] **Security headers HTTP** — X-Frame-Options, CSP, X-Content-Type-Options, Referrer-Policy
+- [x] 12 tests nuevos de seguridad (179 Python total)
+
+| Archivo | Cambio |
+|---------|--------|
+| `software/scouterhud/auth/auth_manager.py` | Rate limiting, fail-closed, PINs por config |
+| `software/scouterhud/main.py` | `_load_demo_pins()` desde emulator config |
+| `software/scouterhud/input/phone_input.py` | Security headers, message size/rate limit, URL/chat validation |
+| `software/scouterhud/qrlink/protocol.py` | URL length limit, fail-closed auth |
+
+---
 
 ### Phase A2 — Tactile Overlay
 

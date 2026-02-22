@@ -76,9 +76,10 @@ The full software stack is functional and tested end-to-end — HUD + App + Emul
 - **Phone Control** — WebSocket server + Flutter app + web fallback for remote control
 - **Input System** — Keyboard, phone (WebSocket), Gauntlet (BLE stub) — all unified via InputManager
 - **Authentication** — Biometric (FaceID/fingerprint bypasses PIN) + interactive 4-digit PIN + token auth
+- **Security (Phase S0)** — PIN rate limiting (5 attempts → 15 min lockout), input validation, fail-closed auth, security headers, no hardcoded secrets
 - **Multi-device** — Device history with switching (next/prev/list), device list screen in app, QR scanning between devices
 - **State Machine** — SCANNING > AUTH > CONNECTING > STREAMING > DEVICE_LIST > ERROR
-- **167 Python + 24 Flutter Tests** (191 total) — Full coverage of protocol, auth, renderer, input, connection, phone, gauntlet
+- **179 Python + 24 Flutter Tests** (203 total) — Full coverage of protocol, auth, renderer, input, connection, phone, gauntlet, security
 
 Next: hardware prototyping + security hardening (TLS, phone pairing, challenge-response). See [Security Model](docs/security-model.md).
 
