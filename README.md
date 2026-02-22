@@ -185,6 +185,11 @@ scouterHUD/
 ## Hardware
 
 <p align="center">
+  <img src="docs/basic_hardware.jpeg" width="280" alt="ScouterHUD headset concept — worn, male"/>
+  <img src="docs/basic_hardware_2.jpeg" width="280" alt="ScouterHUD headset concept — worn, female"/>
+</p>
+
+<p align="center">
   <img src="docs/basic-design.jpg" width="400" alt="ScouterHUD hardware design — side view"/>
   <img src="docs/basic-design-front.jpg" width="400" alt="ScouterHUD hardware design — front view"/>
 </p>
