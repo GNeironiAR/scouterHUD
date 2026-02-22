@@ -183,6 +183,13 @@ scouterHUD/
 
 ## Hardware
 
+<p align="center">
+  <img src="docs/basic-design.jpg" width="400" alt="ScouterHUD hardware design — side view"/>
+  <img src="docs/basic-design-front.jpg" width="400" alt="ScouterHUD hardware design — front view"/>
+</p>
+
+Modular headband design: frame with rail system, monocular display over one eye, Raspberry Pi and bone conduction speaker on the side, battery pack as counterweight on the back, microphone near the chin. No camera. All modules are clip-on and interchangeable.
+
 | Component | ScouterHUD | ScouterApp | ScouterBridge | Gauntlet (optional) |
 |-----------|-----------|-----------|---------------|---------------------|
 | Processor | Raspberry Pi Zero 2W | Your phone | ESP32-S3 | ESP32-S3 |
