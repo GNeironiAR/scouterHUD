@@ -5,9 +5,9 @@
 An open-source wearable ecosystem that lets you see any device's data floating in front of your eye in real time. Scan a QR code with your phone, authenticate with your fingerprint, and live data appears in your HUD. No screens. No touching. Hands free. **No camera on your face** — privacy by design.
 
 <p align="center">
-  <img src="docs/nurse_1.jpeg" width="280" alt="Nurse using ScouterHUD — vitals in line of sight"/>
-  <img src="docs/nurse_2.jpeg" width="280" alt="ScouterHUD medical use case — hands on patient"/>
-  <img src="docs/Gemini_Generated_Image_yv7opyyv7opyyv7o.png" width="280" alt="Vehicle HUD use case"/>
+  <img src="docs/images/usecase-nurse-1.jpeg" width="280" alt="Nurse using ScouterHUD — vitals in line of sight"/>
+  <img src="docs/images/usecase-nurse-2.jpeg" width="280" alt="ScouterHUD medical use case — hands on patient"/>
+  <img src="docs/images/concept-vehicle.png" width="280" alt="Vehicle HUD use case"/>
 </p>
 
 ---
@@ -48,8 +48,8 @@ with your phone  ────────► to the HUD, which ─────�
 **Optional accessory: Tactile Overlay** — A silicone/TPU membrane with raised ridges placed over the phone screen. Lets you feel the buttons without looking. Works through medical gloves (nitrile). 3D-printed mold + cast silicone.
 
 <p align="center">
-  <img src="docs/Gemini_Generated_Image_l8l5e0l8l5e0l8l5.png" width="280" alt="ScouterGauntlet concept"/>
-  <img src="docs/Gemini_Generated_Image_84xkhz84xkhz84xk.png" width="280" alt="Infrastructure use case"/>
+  <img src="docs/images/concept-gauntlet.png" width="280" alt="ScouterGauntlet concept"/>
+  <img src="docs/images/concept-infra.png" width="280" alt="Infrastructure use case"/>
 </p>
 
 ## QR-Link Protocol
@@ -71,6 +71,7 @@ The app scans it with the phone camera, sends the URL to the HUD, and it connect
 The full software stack is functional and tested end-to-end — HUD + App + Emulator:
 
 - **ScouterApp** (Flutter, Android) — v0.4.0 on phone. QR scanning, biometric auth (FaceID/fingerprint), gesture-based panel system (D-pad, QWERTY, numpad, AI chat, device list), auto-reconnect WebSocket. [APK builds from source](docs/STATUS.md#phase-a1--scouterapp-flutter-mvp)
+- **On-device AI Chat** — Gemma 3 1B running locally on the phone via flutter_gemma. No cloud, no network after first download (~500 MB one-time). Streaming responses, GPU-accelerated
 - **ScouterHUD Software** — MQTT transport, 6 device-specific layouts, preview mode for WSL2/headless
 - **Device Emulator** — 5 simulated IoT devices publishing realistic data via MQTT
 - **Phone Control** — WebSocket server + Flutter app + web fallback for remote control
@@ -79,11 +80,27 @@ The full software stack is functional and tested end-to-end — HUD + App + Emul
 - **Security (Phase S0)** — PIN rate limiting (5 attempts → 15 min lockout), input validation, fail-closed auth, security headers, no hardcoded secrets
 - **Multi-device** — Device history with switching (next/prev/list), device list screen in app, QR scanning between devices
 - **State Machine** — SCANNING > AUTH > CONNECTING > STREAMING > DEVICE_LIST > ERROR
-- **179 Python + 24 Flutter Tests** (203 total) — Full coverage of protocol, auth, renderer, input, connection, phone, gauntlet, security
+- **179 Python + 32 Flutter Tests** (211 total) — Full coverage of protocol, auth, renderer, input, connection, phone, gauntlet, security, LLM service
 
-Next: hardware prototyping + security hardening (TLS, phone pairing, challenge-response). See [Security Model](docs/security-model.md).
+Next: AI context awareness (feed HUD sensor data into LLM), hardware prototyping, security hardening (TLS, phone pairing, challenge-response). See [Security Model](docs/security-model.md).
 
 See [docs/STATUS.md](docs/STATUS.md) for detailed progress.
+
+### Screenshots
+
+<p align="center">
+  <img src="docs/images/app-main.jpeg" width="400" alt="ScouterApp — main control panel with D-pad, actions, and AI chat"/>
+  <img src="docs/images/app-device-list.jpeg" width="400" alt="ScouterApp — device list with active device"/>
+</p>
+<p align="center">
+  <img src="docs/images/app-keyboard.jpeg" width="400" alt="ScouterApp — full QWERTY keyboard panel"/>
+  <img src="docs/images/app-ai-chat.jpeg" width="400" alt="ScouterApp — AI assistant chat (local Gemma 3 1B)"/>
+</p>
+<p align="center">
+  <img src="docs/images/hud-monitor.png" width="240" alt="HUD display — patient monitor vitals layout"/>
+  <img src="docs/images/hud-device-list.png" width="240" alt="HUD display — device list screen"/>
+  <img src="docs/images/app-ai-download.jpeg" width="240" alt="ScouterApp — AI model downloading"/>
+</p>
 
 ## Quick start
 
@@ -185,13 +202,13 @@ scouterHUD/
 ## Hardware
 
 <p align="center">
-  <img src="docs/basic_hardware.jpeg" width="280" alt="ScouterHUD headset concept — worn, male"/>
-  <img src="docs/basic_hardware_2.jpeg" width="280" alt="ScouterHUD headset concept — worn, female"/>
+  <img src="docs/images/hardware-concept-male.jpeg" width="280" alt="ScouterHUD headset concept — worn, male"/>
+  <img src="docs/images/hardware-concept-female.jpeg" width="280" alt="ScouterHUD headset concept — worn, female"/>
 </p>
 
 <p align="center">
-  <img src="docs/basic-design.jpg" width="400" alt="ScouterHUD hardware design — side view"/>
-  <img src="docs/basic-design-front.jpg" width="400" alt="ScouterHUD hardware design — front view"/>
+  <img src="docs/images/hardware-design-side.jpg" width="400" alt="ScouterHUD hardware design — side view"/>
+  <img src="docs/images/hardware-design-front.jpg" width="400" alt="ScouterHUD hardware design — front view"/>
 </p>
 
 Modular headband design: frame with rail system, monocular display over one eye, Raspberry Pi and bone conduction speaker on the side, battery pack as counterweight on the back, microphone near the chin. No camera. All modules are clip-on and interchangeable.
@@ -210,7 +227,7 @@ Modular headband design: frame with rail system, monocular display over one eye,
 | Layer | Technology |
 |-------|-----------|
 | HUD software | Python 3.12, Pillow, pygame, paho-mqtt, pyzbar, websockets |
-| ScouterApp | Flutter/Dart, Provider, mobile_scanner, local_auth, web_socket_channel |
+| ScouterApp | Flutter/Dart, Provider, mobile_scanner, local_auth, web_socket_channel, flutter_gemma |
 | Emulator | Python 3.12, asyncio, paho-mqtt, qrcode, reportlab |
 | Firmware (planned) | C++, PlatformIO, Arduino, ESP-IDF |
 | Protocol | QR-Link (custom), MQTT, WebSocket JSON, BLE GATT |

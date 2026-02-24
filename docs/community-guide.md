@@ -193,7 +193,7 @@ Not all contributions are equal. Here's where help has the most impact, roughly 
 
 ### Long-term impact
 
-7. **LLM on-device integration** — The AI chat UI is built and working (echo stub). The blocker is Flutter + llama.cpp native bridge stability. If you have experience with native FFI in Flutter or llama.cpp mobile deployment, this is the highest-impact unsolved problem.
+7. **LLM context awareness** — On-device AI chat works (Gemma 3 1B via flutter_gemma). Next step: feed real-time HUD sensor data into the LLM context so the AI can answer questions about what the user is seeing (e.g., "what's the patient's heart rate?").
 
 8. **BLE transport** — Replace WiFi/WebSocket with BLE for phone↔HUD communication. Requires the Pi Zero 2W hardware. Protocol is already transport-agnostic.
 
@@ -281,7 +281,7 @@ scouterhud-emulator-ventilator/ # Mechanical ventilator emulator
 
 ### Advanced contributions
 
-7. **Solve LLM on-device.** The UI exists. The protocol exists. What's missing is a working Flutter → llama.cpp native bridge. See [llm-attempts.md](../docs/) for what we've tried and why it failed.
+7. **Improve LLM context.** On-device inference works (Gemma 3 1B). The next challenge is injecting real-time HUD data into the LLM's limited context window (~2048 tokens) so the AI can reason about sensor readings, alarms, and device state.
 
 8. **Implement BLE transport.** Replace WebSocket with BLE for phone↔HUD. The `PhoneInput` backend is designed for multiple transports. Needs Pi Zero 2W hardware.
 
