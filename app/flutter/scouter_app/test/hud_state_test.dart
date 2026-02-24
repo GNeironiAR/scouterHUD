@@ -152,6 +152,43 @@ void main() {
       );
     });
 
+    test('updateLastAiMessage updates last AI message text', () {
+      hud.addChatMessage('user', 'Hello');
+      hud.addChatMessage('ai', '');
+
+      hud.updateLastAiMessage('Hello! How can I help?');
+      expect(hud.chatMessages.last.text, 'Hello! How can I help?');
+      expect(hud.chatMessages.last.sender, 'ai');
+    });
+
+    test('updateLastAiMessage preserves timestamp', () {
+      hud.addChatMessage('ai', 'initial');
+      final originalTimestamp = hud.chatMessages.last.timestamp;
+
+      hud.updateLastAiMessage('updated');
+      expect(hud.chatMessages.last.timestamp, originalTimestamp);
+    });
+
+    test('updateLastAiMessage does nothing if last message is user', () {
+      hud.addChatMessage('user', 'Hello');
+      hud.updateLastAiMessage('should not change');
+      expect(hud.chatMessages.last.text, 'Hello');
+      expect(hud.chatMessages.last.sender, 'user');
+    });
+
+    test('updateLastAiMessage does nothing on empty list', () {
+      hud.updateLastAiMessage('should not crash');
+      expect(hud.chatMessages, isEmpty);
+    });
+
+    test('updateLastAiMessage notifies listeners', () {
+      hud.addChatMessage('ai', '');
+      int notifyCount = 0;
+      hud.addListener(() => notifyCount++);
+      hud.updateLastAiMessage('updated');
+      expect(notifyCount, 1);
+    });
+
     // Device list tests
     test('updateState parses device_list', () {
       hud.updateState('device_list');

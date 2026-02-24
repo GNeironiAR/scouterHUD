@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/hud_state.dart';
 import '../models/panel_state.dart';
+import '../services/llm_service.dart';
 import '../services/websocket_service.dart';
 import '../theme/scouter_colors.dart';
 import '../widgets/action_button_grid.dart';
@@ -20,8 +21,13 @@ import 'qr_scanner_screen.dart';
 
 class ControlScreen extends StatefulWidget {
   final WebSocketService wsService;
+  final LlmService llmService;
 
-  const ControlScreen({super.key, required this.wsService});
+  const ControlScreen({
+    super.key,
+    required this.wsService,
+    required this.llmService,
+  });
 
   @override
   State<ControlScreen> createState() => _ControlScreenState();
@@ -81,6 +87,7 @@ class _ControlScreenState extends State<ControlScreen> {
             return _wrapWithStatusBar(
               AiChatScreen(
                 wsService: widget.wsService,
+                llmService: widget.llmService,
                 onClose: _closeAiChat,
               ),
             );
