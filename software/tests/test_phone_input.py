@@ -356,3 +356,40 @@ class TestStateSerialization:
         assert captured[0]["devices"] == []
         assert captured[0]["selected"] == 0
         assert captured[0]["active"] == ""
+
+    def test_send_sensor_data(self):
+        pi = PhoneInput()
+        captured = []
+        pi._broadcast = lambda msg: captured.append(msg)
+
+        pi.send_sensor_data(
+            device_id="monitor-bed-12",
+            device_name="Monitor Cama 12",
+            device_type="medical.respiratory_monitor",
+            data={"spo2": 97, "heart_rate": 72, "temp_c": 36.8, "alerts": [], "status": "stable"},
+            schema={"spo2": {"unit": "%", "range": [0, 100]}, "heart_rate": {"unit": "bpm"}},
+        )
+        assert len(captured) == 1
+        msg = captured[0]
+        assert msg["type"] == "sensor_data"
+        assert msg["device_id"] == "monitor-bed-12"
+        assert msg["device_name"] == "Monitor Cama 12"
+        assert msg["device_type"] == "medical.respiratory_monitor"
+        assert msg["data"]["spo2"] == 97
+        assert msg["schema"]["spo2"]["unit"] == "%"
+
+    def test_send_sensor_data_minimal(self):
+        pi = PhoneInput()
+        captured = []
+        pi._broadcast = lambda msg: captured.append(msg)
+
+        pi.send_sensor_data(
+            device_id="test",
+            device_name=None,
+            device_type=None,
+            data={"temp": 22.0},
+            schema={},
+        )
+        msg = captured[0]
+        assert msg["device_name"] == "test"  # falls back to device_id
+        assert msg["device_type"] == "unknown"

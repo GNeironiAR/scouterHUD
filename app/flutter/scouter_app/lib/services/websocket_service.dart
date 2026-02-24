@@ -114,6 +114,14 @@ class WebSocketService {
         final selected = msg['selected'] as int? ?? 0;
         final activeId = msg['active'] as String? ?? '';
         hudConnection.updateDeviceList(devices, selected, activeId);
+      } else if (type == 'sensor_data') {
+        hudConnection.updateSensorData(
+          deviceId: msg['device_id'] as String? ?? '',
+          deviceName: msg['device_name'] as String? ?? '',
+          deviceType: msg['device_type'] as String? ?? '',
+          data: Map<String, dynamic>.from(msg['data'] as Map? ?? {}),
+          schema: Map<String, dynamic>.from(msg['schema'] as Map? ?? {}),
+        );
       }
     } catch (_) {
       // Ignore malformed messages

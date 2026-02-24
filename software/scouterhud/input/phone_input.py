@@ -186,6 +186,24 @@ class PhoneInput(InputBackend):
             "active": active_id,
         })
 
+    def send_sensor_data(
+        self,
+        device_id: str,
+        device_name: str | None,
+        device_type: str | None,
+        data: dict,
+        schema: dict,
+    ) -> None:
+        """Send latest sensor data + device context to all connected phones."""
+        self._broadcast({
+            "type": "sensor_data",
+            "device_id": device_id,
+            "device_name": device_name or device_id,
+            "device_type": device_type or "unknown",
+            "data": data,
+            "schema": schema,
+        })
+
     # ── Private ──
 
     def _load_html(self) -> None:

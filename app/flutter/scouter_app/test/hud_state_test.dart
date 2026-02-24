@@ -230,6 +230,100 @@ void main() {
       hud.setActivePanel(PanelState.deviceList);
       expect(hud.activePanel, PanelState.deviceList);
     });
+
+    // Sensor context tests
+    test('initial sensorContext is null', () {
+      expect(hud.sensorContext, isNull);
+    });
+
+    test('updateSensorData stores sensor context', () {
+      hud.updateSensorData(
+        deviceId: 'monitor-bed-12',
+        deviceName: 'Monitor Cama 12',
+        deviceType: 'medical.respiratory_monitor',
+        data: {'spo2': 97, 'heart_rate': 72, 'temp_c': 36.8},
+        schema: {
+          'spo2': {'unit': '%'},
+          'heart_rate': {'unit': 'bpm'},
+          'temp_c': {'unit': 'C'},
+        },
+      );
+      expect(hud.sensorContext, isNotNull);
+      expect(hud.sensorContext!.deviceId, 'monitor-bed-12');
+      expect(hud.sensorContext!.data['spo2'], 97);
+    });
+
+    test('updateSensorData notifies listeners', () {
+      int notifyCount = 0;
+      hud.addListener(() => notifyCount++);
+      hud.updateSensorData(
+        deviceId: 'test',
+        deviceName: 'Test',
+        deviceType: 'test',
+        data: {'temp': 22.0},
+        schema: {},
+      );
+      expect(notifyCount, 1);
+    });
+
+    test('sensorContext cleared on disconnect', () {
+      hud.setConnected(true);
+      hud.updateSensorData(
+        deviceId: 'test',
+        deviceName: 'Test',
+        deviceType: 'test',
+        data: {'temp': 22.0},
+        schema: {},
+      );
+      expect(hud.sensorContext, isNotNull);
+      hud.setConnected(false);
+      expect(hud.sensorContext, isNull);
+    });
+
+    test('sensorContext toContextString formats correctly', () {
+      hud.updateSensorData(
+        deviceId: 'monitor-bed-12',
+        deviceName: 'Monitor Cama 12',
+        deviceType: 'medical.respiratory_monitor',
+        data: {
+          'spo2': 97,
+          'heart_rate': 72,
+          'temp_c': 36.8,
+          'ts': 1709000000,
+          'alerts': <dynamic>[],
+          'status': 'stable',
+        },
+        schema: {
+          'spo2': {'unit': '%'},
+          'heart_rate': {'unit': 'bpm'},
+          'temp_c': {'unit': 'C'},
+        },
+      );
+      final ctx = hud.sensorContext!.toContextString();
+      expect(ctx, contains('Monitor Cama 12'));
+      expect(ctx, contains('spo2: 97 %'));
+      expect(ctx, contains('heart_rate: 72 bpm'));
+      expect(ctx, contains('temp_c: 36.8 C'));
+      expect(ctx, isNot(contains('ts:')));
+      expect(ctx, contains('Status: stable'));
+    });
+
+    test('sensorContext toContextString includes alerts when non-empty', () {
+      hud.updateSensorData(
+        deviceId: 'test',
+        deviceName: 'Test Monitor',
+        deviceType: 'medical',
+        data: {
+          'spo2': 85,
+          'alerts': <dynamic>['LOW_SPO2'],
+          'status': 'critical',
+        },
+        schema: {'spo2': {'unit': '%'}},
+      );
+      final ctx = hud.sensorContext!.toContextString();
+      expect(ctx, contains('LOW_SPO2'));
+      expect(ctx, contains('critical'));
+    });
   });
 
   group('DeviceInfo', () {

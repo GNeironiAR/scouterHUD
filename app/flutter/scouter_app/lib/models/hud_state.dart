@@ -47,6 +47,51 @@ class ChatMessage {
   }) : timestamp = timestamp ?? DateTime.now();
 }
 
+class SensorContext {
+  final String deviceId;
+  final String deviceName;
+  final String deviceType;
+  final Map<String, dynamic> data;
+  final Map<String, dynamic> schema;
+  final DateTime receivedAt;
+
+  SensorContext({
+    required this.deviceId,
+    required this.deviceName,
+    required this.deviceType,
+    required this.data,
+    required this.schema,
+    DateTime? receivedAt,
+  }) : receivedAt = receivedAt ?? DateTime.now();
+
+  /// Build a compact context string for LLM injection (~100-200 tokens).
+  String toContextString() {
+    final buf = StringBuffer();
+    buf.writeln('Device: $deviceName ($deviceType)');
+    buf.writeln('Data:');
+    for (final entry in data.entries) {
+      if (entry.key == 'ts') continue;
+      if (entry.key == 'alerts' || entry.key == 'status' ||
+          entry.key == 'dtc_codes') continue;
+      final fieldSchema = schema[entry.key];
+      final unit = fieldSchema is Map ? (fieldSchema['unit'] ?? '') : '';
+      buf.writeln('  ${entry.key}: ${entry.value} $unit');
+    }
+    if (data.containsKey('alerts') && data['alerts'] is List &&
+        (data['alerts'] as List).isNotEmpty) {
+      buf.writeln('Alerts: ${(data["alerts"] as List).join(", ")}');
+    }
+    if (data.containsKey('status')) {
+      buf.writeln('Status: ${data["status"]}');
+    }
+    if (data.containsKey('dtc_codes') && data['dtc_codes'] is List &&
+        (data['dtc_codes'] as List).isNotEmpty) {
+      buf.writeln('DTC: ${(data["dtc_codes"] as List).join(", ")}');
+    }
+    return buf.toString().trim();
+  }
+}
+
 class HudConnection extends ChangeNotifier {
   HudState _state = HudState.disconnected;
   bool _isConnected = false;
@@ -58,6 +103,7 @@ class HudConnection extends ChangeNotifier {
   List<DeviceInfo> _deviceList = [];
   int _deviceListSelected = 0;
   String _activeDeviceId = '';
+  SensorContext? _sensorContext;
 
   HudState get state => _state;
   bool get isConnected => _isConnected;
@@ -69,6 +115,7 @@ class HudConnection extends ChangeNotifier {
   List<DeviceInfo> get deviceList => List.unmodifiable(_deviceList);
   int get deviceListSelected => _deviceListSelected;
   String get activeDeviceId => _activeDeviceId;
+  SensorContext? get sensorContext => _sensorContext;
 
   void updateState(String stateName, {String? device, String? error}) {
     _state = _parseState(stateName);
@@ -86,6 +133,7 @@ class HudConnection extends ChangeNotifier {
     if (!connected) {
       _state = HudState.disconnected;
       _activePanel = PanelState.base;
+      _sensorContext = null;
     }
     notifyListeners();
   }
@@ -129,6 +177,23 @@ class HudConnection extends ChangeNotifier {
     _deviceList = devices;
     _deviceListSelected = selected;
     _activeDeviceId = activeId;
+    notifyListeners();
+  }
+
+  void updateSensorData({
+    required String deviceId,
+    required String deviceName,
+    required String deviceType,
+    required Map<String, dynamic> data,
+    required Map<String, dynamic> schema,
+  }) {
+    _sensorContext = SensorContext(
+      deviceId: deviceId,
+      deviceName: deviceName,
+      deviceType: deviceType,
+      data: data,
+      schema: schema,
+    );
     notifyListeners();
   }
 

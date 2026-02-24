@@ -112,6 +112,9 @@ class ScouterHUD:
         # Device list
         self._device_list_index = 0
 
+        # Sensor broadcast throttle (max 1 Hz to phone)
+        self._last_sensor_broadcast = 0.0
+
     @staticmethod
     def _load_demo_pins() -> dict[str, str]:
         """Load device PINs from emulator config.yaml (if available)."""
@@ -456,6 +459,19 @@ class ScouterHUD:
             if data and self.connection.active_device:
                 frame = render_frame(self.connection.active_device, data)
                 self.display.show(frame)
+
+                # Send sensor data to phone (throttled to 1 Hz)
+                now = time.monotonic()
+                if self._phone_input and now - self._last_sensor_broadcast >= 1.0:
+                    self._last_sensor_broadcast = now
+                    device = self.connection.active_device
+                    self._phone_input.send_sensor_data(
+                        device_id=device.id,
+                        device_name=device.name,
+                        device_type=device.type,
+                        data=data,
+                        schema=device.schema,
+                    )
             elif self.connection.active_device:
                 device_id = self.connection.active_device.id
                 self.display.show(render_connecting_screen(device_id))
