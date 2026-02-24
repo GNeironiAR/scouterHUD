@@ -71,7 +71,7 @@ The app scans it with the phone camera, sends the URL to the HUD, and it connect
 The full software stack is functional and tested end-to-end — HUD + App + Emulator:
 
 - **ScouterApp** (Flutter, Android) — v0.4.0 on phone. QR scanning, biometric auth (FaceID/fingerprint), gesture-based panel system (D-pad, QWERTY, numpad, AI chat, device list), auto-reconnect WebSocket. [APK builds from source](docs/STATUS.md#phase-a1--scouterapp-flutter-mvp)
-- **On-device AI Chat** — Gemma 3 1B running locally on the phone via flutter_gemma. No cloud, no network after first download (~500 MB one-time). Streaming responses, GPU-accelerated
+- **On-device AI Chat** — Gemma 3 1B running locally on the phone via flutter_gemma. No cloud, no network after first download (~500 MB one-time). Streaming responses, GPU-accelerated. **Context-aware**: the AI sees live sensor data from the connected device and can answer questions about it
 - **ScouterHUD Software** — MQTT transport, 6 device-specific layouts, preview mode for WSL2/headless
 - **Device Emulator** — 5 simulated IoT devices publishing realistic data via MQTT
 - **Phone Control** — WebSocket server + Flutter app + web fallback for remote control
@@ -80,9 +80,9 @@ The full software stack is functional and tested end-to-end — HUD + App + Emul
 - **Security (Phase S0)** — PIN rate limiting (5 attempts → 15 min lockout), input validation, fail-closed auth, security headers, no hardcoded secrets
 - **Multi-device** — Device history with switching (next/prev/list), device list screen in app, QR scanning between devices
 - **State Machine** — SCANNING > AUTH > CONNECTING > STREAMING > DEVICE_LIST > ERROR
-- **179 Python + 32 Flutter Tests** (211 total) — Full coverage of protocol, auth, renderer, input, connection, phone, gauntlet, security, LLM service
+- **181 Python + 40 Flutter Tests** (221 total) — Full coverage of protocol, auth, renderer, input, connection, phone, gauntlet, security, LLM service, sensor context
 
-Next: AI context awareness (feed HUD sensor data into LLM), hardware prototyping, security hardening (TLS, phone pairing, challenge-response). See [Security Model](docs/security-model.md).
+Next: hardware prototyping, security hardening (TLS, phone pairing, challenge-response). See [Security Model](docs/security-model.md).
 
 See [docs/STATUS.md](docs/STATUS.md) for detailed progress.
 
@@ -100,6 +100,10 @@ See [docs/STATUS.md](docs/STATUS.md) for detailed progress.
   <img src="docs/images/hud-monitor.png" width="240" alt="HUD display — patient monitor vitals layout"/>
   <img src="docs/images/hud-device-list.png" width="240" alt="HUD display — device list screen"/>
   <img src="docs/images/app-ai-download.jpeg" width="240" alt="ScouterApp — AI model downloading"/>
+</p>
+<p align="center">
+  <img src="docs/images/ia_context_1.jpg" width="400" alt="ScouterApp — AI with sensor context, reading live patient data"/>
+  <img src="docs/images/ia_context_2.jpg" width="400" alt="ScouterApp — AI analyzing patient parameters from device"/>
 </p>
 
 ## Quick start

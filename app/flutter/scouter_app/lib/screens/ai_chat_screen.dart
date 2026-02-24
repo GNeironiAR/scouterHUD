@@ -57,9 +57,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
     // Add placeholder AI message for streaming
     hud.addChatMessage('ai', '');
 
+    // Inject sensor context from HUD device data
+    final sensorCtx = hud.sensorContext?.toContextString();
+
     final buffer = StringBuffer();
     _streamSub = widget.llmService
-        .generateResponseStream(hud.chatMessages)
+        .generateResponseStream(hud.chatMessages, sensorContext: sensorCtx)
         .listen(
       (token) {
         buffer.write(token);
@@ -156,6 +159,28 @@ class _AiChatScreenState extends State<AiChatScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   );
+                },
+              ),
+              // Sensor context indicator
+              Consumer<HudConnection>(
+                builder: (context, hud, _) {
+                  if (hud.sensorContext != null) {
+                    return Flexible(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Text(
+                          '\u25CF ${hud.sensorContext!.deviceName}',
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 9,
+                            color: ScouterColors.cyan,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
                 },
               ),
               const Spacer(),

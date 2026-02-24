@@ -40,5 +40,33 @@ void main() {
       expect(tokens.length, 1);
       expect(tokens.first, contains('not ready'));
     });
+
+    test('generateResponseStream with sensorContext yields error when not ready',
+        () async {
+      final history = [
+        ChatMessage(sender: 'user', text: 'What is the temperature?'),
+      ];
+      final tokens = <String>[];
+      await for (final token in service.generateResponseStream(
+        history,
+        sensorContext: 'Device: Monitor\nData:\n  temp_c: 36.8 C',
+      )) {
+        tokens.add(token);
+      }
+      expect(tokens.length, 1);
+      expect(tokens.first, contains('not ready'));
+    });
+
+    test('generateResponse with sensorContext returns error when not ready',
+        () async {
+      final history = [
+        ChatMessage(sender: 'user', text: 'SpO2?'),
+      ];
+      final response = await service.generateResponse(
+        history,
+        sensorContext: 'Device: Monitor\nData:\n  spo2: 97 %',
+      );
+      expect(response, contains('not ready'));
+    });
   });
 }

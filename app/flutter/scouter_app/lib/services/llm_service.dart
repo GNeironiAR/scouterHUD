@@ -81,7 +81,12 @@ class LlmService extends ChangeNotifier {
 
   /// Generate a response from conversation history using streaming.
   /// Returns a stream of tokens as they are generated.
-  Stream<String> generateResponseStream(List<ChatMessage> history) async* {
+  /// If [sensorContext] is provided, it is injected as a context prefix
+  /// so the LLM can answer questions about the device's sensor data.
+  Stream<String> generateResponseStream(
+    List<ChatMessage> history, {
+    String? sensorContext,
+  }) async* {
     if (!_isReady) {
       yield 'Model not ready. Please wait for download to complete.';
       return;
@@ -92,7 +97,7 @@ class LlmService extends ChangeNotifier {
 
     try {
       model = await FlutterGemma.getActiveModel(
-        maxTokens: 1024,
+        maxTokens: 2048,
         preferredBackend: PreferredBackend.gpu,
       );
 
@@ -101,14 +106,37 @@ class LlmService extends ChangeNotifier {
         topK: 40,
       );
 
-      // Add conversation history (last 10 messages max to fit context)
-      final recent = history.length > 10
-          ? history.sublist(history.length - 10)
+      // Add conversation history.
+      // When sensor context is available, we prefix it directly onto
+      // the last user message (saves tokens vs a synthetic pair, and
+      // keeps context right next to the question).
+      final maxHistory = sensorContext != null ? 4 : 10;
+      final recent = history.length > maxHistory
+          ? history.sublist(history.length - maxHistory)
           : history;
 
-      for (final msg in recent) {
+      // Find the last user message index to attach context to it
+      int lastUserIdx = -1;
+      if (sensorContext != null && sensorContext.isNotEmpty) {
+        for (int i = recent.length - 1; i >= 0; i--) {
+          if (recent[i].sender == 'user') {
+            lastUserIdx = i;
+            break;
+          }
+        }
+      }
+
+      for (int i = 0; i < recent.length; i++) {
+        final msg = recent[i];
+        var text = msg.text;
+        // Prefix sensor context onto the last user message
+        if (i == lastUserIdx) {
+          text = '[Sensor data: $sensorContext]\n$text';
+        }
+        // Skip empty AI placeholders
+        if (msg.sender == 'ai' && text.isEmpty) continue;
         await chat.addQueryChunk(Message.text(
-          text: msg.text,
+          text: text,
           isUser: msg.sender == 'user',
         ));
       }
@@ -147,9 +175,13 @@ class LlmService extends ChangeNotifier {
   }
 
   /// Non-streaming: generate full response at once.
-  Future<String> generateResponse(List<ChatMessage> history) async {
+  Future<String> generateResponse(
+    List<ChatMessage> history, {
+    String? sensorContext,
+  }) async {
     final buffer = StringBuffer();
-    await for (final token in generateResponseStream(history)) {
+    await for (final token
+        in generateResponseStream(history, sensorContext: sensorContext)) {
       buffer.write(token);
     }
     return buffer.toString();
