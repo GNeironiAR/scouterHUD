@@ -27,12 +27,12 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 | ~~BLE client (Pi ↔ input)~~ | ~~`input/gauntlet_input.py` con bleak~~ | ~~Recibir eventos de App/Gauntlet~~ | **Stub listo** (necesita HW) |
 | ~~PIN/TOTP auth flow~~ | ~~`software/scouterhud/auth/`~~ | ~~QR-Link auth Nivel 1-2~~ | **Completado** |
 | ~~Multi-device switching~~ | ~~Ampliar `ConnectionManager`~~ | ~~Swipe entre dispositivos~~ | **Completado** |
-| ~~Unit tests~~ | ~~`software/tests/`~~ | ~~Validación automática~~ | **211 tests passing** |
+| ~~Unit tests~~ | ~~`software/tests/`~~ | ~~Validación automática~~ | **221 tests passing** |
 | ~~ScouterApp (PoC)~~ | ~~`app/web/` WebSocket + HTML~~ | ~~Input principal del ecosistema~~ | **Completado** |
 | ~~ScouterApp (Flutter)~~ | ~~`app/flutter/`~~ | ~~App nativa Android/iOS~~ | **v0.4.0 — Completado** |
 | Tactile overlay | `app/overlay/` STL + molde silicona | Operación a ciegas / con guantes | Después de la app |
 | ~~AI Chat local (LLM on-device)~~ | ~~`app/flutter/` LlmService~~ | ~~Asistente AI sin cloud (PII/compliance)~~ | **Completado — flutter_gemma + Gemma 3 1B** |
-| AI Context awareness | `app/flutter/` LlmService | AI con acceso a datos del HUD en tiempo real | Pendiente |
+| ~~AI Context awareness~~ | ~~`app/flutter/` LlmService~~ | ~~AI con acceso a datos del HUD en tiempo real~~ | **Completado — sensor data pipeline** |
 | Voice/AI pipeline | `software/scouterhud/input/voice.py` | Asistente por voz, STT/TTS | Baja (post-MVP) |
 | Gauntlet firmware | `gauntlet/firmware/` (ESP32, PlatformIO) | Accesorio opcional (guantes gruesos, IP67) | Baja (opcional) |
 | Bridge firmware | `bridge/firmware/` (ESP32, PlatformIO) | Hardware del Bridge | Cuando llegue el ESP32 |
@@ -253,7 +253,7 @@ Software principal del ScouterHUD con display emulado en desktop.
 ### Unit Tests
 **Estado:** Completado
 
-179 tests Python + 32 tests Flutter (211 total) cubriendo todos los módulos core. Python tests corren en <0.3s sin hardware ni broker.
+181 tests Python + 40 tests Flutter (221 total) cubriendo todos los módulos core. Python tests corren en <0.3s sin hardware ni broker.
 
 ```bash
 cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
@@ -267,9 +267,9 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 | `tests/test_input.py` | 13 | EventType, InputEvent, InputManager con mock backends |
 | `tests/test_connection.py` | 11 | Device history, switching, dedup, mock MQTT transport |
 | `tests/test_gauntlet.py` | 21 | Pad→event translation (nav + numeric), BLE notification parser, battery |
-| `tests/test_phone_input.py` | 55 | PhoneInput: message parsing, event map, queue, state broadcast, biometric, device_list, input validation |
-| `app/flutter/.../test/hud_state_test.dart` | 27 | Flutter: HUD state, panel state, chat messages, device list, DeviceInfo, updateLastAiMessage |
-| `app/flutter/.../test/llm_service_test.dart` | 5 | Flutter: LlmService initial state, generate when not ready |
+| `tests/test_phone_input.py` | 57 | PhoneInput: message parsing, event map, queue, state broadcast, biometric, device_list, input validation, sensor data |
+| `app/flutter/.../test/hud_state_test.dart` | 33 | Flutter: HUD state, panel state, chat messages, device list, DeviceInfo, updateLastAiMessage, sensor context |
+| `app/flutter/.../test/llm_service_test.dart` | 7 | Flutter: LlmService initial state, generate when not ready, sensor context param |
 
 ### BLE Gauntlet Input Stub
 **Estado:** Completado (stub — necesita hardware ESP32 para test real)
@@ -322,9 +322,9 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 
 | Archivo | Descripción | Estado |
 |---------|-------------|--------|
-| `software/scouterhud/input/phone_input.py` | PhoneInput backend: WebSocket server + HTTP + digits + alpha + ai_chat + biometric | Listo |
+| `software/scouterhud/input/phone_input.py` | PhoneInput backend: WebSocket server + HTTP + digits + alpha + ai_chat + biometric + sensor_data broadcast | Listo |
 | `app/web/index.html` | Página de control mobile: D-pad, modo PIN, QR scan, URL input, status bar | Listo |
-| `software/tests/test_phone_input.py` | 47 tests: parsing, event map, queue, state broadcast | Listo |
+| `software/tests/test_phone_input.py` | 57 tests: parsing, event map, queue, state broadcast, sensor data | Listo |
 
 ### Cómo correr con control por celular
 
@@ -357,7 +357,7 @@ code /tmp/scouterhud_live.png
 | Servidor AWS | `qrlink://v1/srv-prod-01/mqtt/localhost:1883?auth=token&t=infra/prod/server01` | token |
 
 ### Phase A1 — ScouterApp: Flutter MVP
-**Estado:** v0.4.0 — Auth biométrica + device list
+**Estado:** v0.4.1 — AI context awareness
 
 - [x] Flutter app con pantalla de control (D-pad + confirm + cancel)
 - [x] **QR scanning nativo** (mobile_scanner 6.0.11 — cámara del celular)
@@ -380,11 +380,12 @@ code /tmp/scouterhud_live.png
 - [x] **Tema visual**: fondo navy #1A1A2E, colores por función (red=cancel, blue=home, yellow=numpad, green=confirm, orange=url, purple=AI, cyan=keyboard)
 - [x] D-pad ◀▶ → prev/next device en streaming (Python backend, sin botones duplicados)
 - [x] Protocolo WebSocket extendido: alpha_key (con value), alpha_backspace/enter/shift, ai_chat, ai_response, biometric_auth
-- [x] 32 tests Flutter + 179 tests Python passing (211 total)
+- [x] 40 tests Flutter + 181 tests Python passing (221 total)
 - [x] **Autenticación biométrica** (FaceID/huella vía `local_auth`) — bypass PIN cuando biometric OK
 - [x] **AI Chat con LLM local** — Gemma 3 1B on-device via flutter_gemma. Streaming, GPU, sin cloud
 - [x] **Pantalla device list** — lista de dispositivos con BACK, CONNECT, filas tocables; auto-switch desde HUD
-- [ ] **AI Context awareness** — inyectar datos del HUD (sensores, alarmas) en el contexto del LLM
+- [x] **AI Context awareness** — sensor data pipeline: MQTT → HUD (1 Hz) → WebSocket → phone → LLM. Contexto inline en último mensaje del usuario
+- [ ] Definir relación dispositivo activo ↔ AI chat (¿el que muestra el HUD? ¿selección manual?)
 - [ ] Comunicación BLE con el HUD (actualmente usa WebSocket vía WiFi)
 - [ ] Pairing flow (escanear QR del HUD)
 
@@ -401,6 +402,7 @@ code /tmp/scouterhud_live.png
 | v0.3.0 | 2026-02-20 | Panel system: QWERTY keyboard, AI Chat, fingerprint button, swipe gestures, dark navy theme | 68.5MB |
 | v0.4.0 | 2026-02-20 | Auth biométrica (local_auth), device list screen con BACK/CONNECT/tap, 191 tests | 66MB |
 | v0.4.0-gemma | 2026-02-24 | On-device AI (flutter_gemma + Gemma 3 1B), fallback model download, streaming chat, 211 tests | 220.7MB |
+| v0.4.1-ai-context | 2026-02-24 | AI context awareness: LLM sees live sensor data from active device, 221 tests | 220.7MB |
 
 **Archivos Flutter:**
 
@@ -410,7 +412,7 @@ code /tmp/scouterhud_live.png
 | `lib/screens/control_screen.dart` | Panel router: BASE/NUMPAD/ALPHA/AI_CHAT + swipe gestures + edge hints | Listo |
 | `lib/screens/numpad_screen.dart` | Full-screen numpad con PIN banner (auto-open en PIN mode) | Listo |
 | `lib/screens/alpha_keyboard_screen.dart` | Full-screen QWERTY keyboard con safe zones | Listo |
-| `lib/screens/ai_chat_screen.dart` | Full-screen AI chat: local Gemma 3 1B inference, streaming tokens, download progress, model status indicator | Listo |
+| `lib/screens/ai_chat_screen.dart` | Full-screen AI chat: local Gemma 3 1B inference, streaming tokens, download progress, model status, sensor context injection | Listo |
 | `lib/screens/qr_scanner_screen.dart` | QR scanner con mobile_scanner + error handling | Listo |
 | `lib/widgets/dpad_widget.dart` | D-pad 5 botones (80x68px) para navegación | Listo |
 | `lib/widgets/numpad_widget.dart` | Teclado numérico 4x3 para PIN entry | Listo |
@@ -422,9 +424,9 @@ code /tmp/scouterhud_live.png
 | `lib/widgets/edge_hint_widget.dart` | Líneas verticales con label rotado (NUMPAD/ALPHA) | Listo |
 | `lib/widgets/gesture_guide_bar.dart` | Barra inferior: "◁ NUMPAD" / "ALPHA ▷" | Listo |
 | `lib/widgets/status_bar_widget.dart` | 3 columnas: conexión, titulo+device, modo activo | Listo |
-| `lib/services/websocket_service.dart` | WebSocket client + sendAlphaKey + sendAiChat + sendBiometricAuth + device_list handler | Listo |
-| `lib/services/llm_service.dart` | LlmService: flutter_gemma wrapper, model download (GitHub→HF fallback), streaming inference | Listo |
-| `lib/models/hud_state.dart` | HudConnection: state, numericMode, activePanel, chatMessages, deviceList, DeviceInfo, updateLastAiMessage | Listo |
+| `lib/services/websocket_service.dart` | WebSocket client + sendAlphaKey + sendAiChat + sendBiometricAuth + device_list + sensor_data handler | Listo |
+| `lib/services/llm_service.dart` | LlmService: flutter_gemma wrapper, model download (GitHub→HF fallback), streaming inference, sensor context param | Listo |
+| `lib/models/hud_state.dart` | HudConnection: state, numericMode, activePanel, chatMessages, deviceList, DeviceInfo, updateLastAiMessage, SensorContext | Listo |
 | `lib/models/panel_state.dart` | Enum: base, numpad, alpha, aiChat, deviceList | Listo |
 | `lib/theme/scouter_colors.dart` | Constantes de color: background, surface, red..cyan, text, border | Listo |
 
@@ -475,7 +477,7 @@ Hardening de seguridad sin cambios de arquitectura. Ver [security-model.md](secu
 - [x] **Validación de AI chat** — mensajes >1024 chars truncados
 - [x] **Fail-closed para auth desconocido** — `?auth=foobar` rechaza la URL (antes defaulteaba a open)
 - [x] **Security headers HTTP** — X-Frame-Options, CSP, X-Content-Type-Options, Referrer-Policy
-- [x] 12 tests nuevos de seguridad (179 Python total)
+- [x] 12 tests nuevos de seguridad (181 Python total)
 
 | Archivo | Cambio |
 |---------|--------|

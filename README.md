@@ -70,7 +70,7 @@ The app scans it with the phone camera, sends the URL to the HUD, and it connect
 
 The full software stack is functional and tested end-to-end — HUD + App + Emulator:
 
-- **ScouterApp** (Flutter, Android) — v0.4.0 on phone. QR scanning, biometric auth (FaceID/fingerprint), gesture-based panel system (D-pad, QWERTY, numpad, AI chat, device list), auto-reconnect WebSocket. [APK builds from source](docs/STATUS.md#phase-a1--scouterapp-flutter-mvp)
+- **ScouterApp** (Flutter, Android) — v0.4.1 on phone. QR scanning, biometric auth (FaceID/fingerprint), gesture-based panel system (D-pad, QWERTY, numpad, AI chat, device list), auto-reconnect WebSocket. [APK builds from source](docs/STATUS.md#phase-a1--scouterapp-flutter-mvp)
 - **On-device AI Chat** — Gemma 3 1B running locally on the phone via flutter_gemma. No cloud, no network after first download (~500 MB one-time). Streaming responses, GPU-accelerated. **Context-aware**: the AI sees live sensor data from the connected device and can answer questions about it
 - **ScouterHUD Software** — MQTT transport, 6 device-specific layouts, preview mode for WSL2/headless
 - **Device Emulator** — 5 simulated IoT devices publishing realistic data via MQTT
