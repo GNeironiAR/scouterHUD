@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/hud_state.dart';
 import 'screens/control_screen.dart';
+import 'services/llm_service.dart';
 import 'services/websocket_service.dart';
 
 void main() {
@@ -27,11 +28,13 @@ class ScouterApp extends StatefulWidget {
 class _ScouterAppState extends State<ScouterApp> {
   final HudConnection _hudConnection = HudConnection();
   late final WebSocketService _wsService;
+  final LlmService _llmService = LlmService();
 
   @override
   void initState() {
     super.initState();
     _wsService = WebSocketService(_hudConnection);
+    _llmService.initialize();
     _autoConnect();
   }
 
@@ -49,6 +52,7 @@ class _ScouterAppState extends State<ScouterApp> {
   @override
   void dispose() {
     _wsService.disconnect();
+    _llmService.dispose();
     _hudConnection.dispose();
     super.dispose();
   }
@@ -63,7 +67,7 @@ class _ScouterAppState extends State<ScouterApp> {
         theme: ThemeData.dark().copyWith(
           scaffoldBackgroundColor: const Color(0xFF1A1A2E),
         ),
-        home: _AppHome(wsService: _wsService),
+        home: _AppHome(wsService: _wsService, llmService: _llmService),
       ),
     );
   }
@@ -71,8 +75,9 @@ class _ScouterAppState extends State<ScouterApp> {
 
 class _AppHome extends StatelessWidget {
   final WebSocketService wsService;
+  final LlmService llmService;
 
-  const _AppHome({required this.wsService});
+  const _AppHome({required this.wsService, required this.llmService});
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +86,7 @@ class _AppHome extends StatelessWidget {
         if (!hud.isConnected) {
           return _ConnectScreen(wsService: wsService);
         }
-        return ControlScreen(wsService: wsService);
+        return ControlScreen(wsService: wsService, llmService: llmService);
       },
     );
   }

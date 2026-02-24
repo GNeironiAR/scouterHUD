@@ -223,6 +223,7 @@ class PhoneInput(InputBackend):
             "0.0.0.0",
             self._port,
             process_request=self._process_request,
+            reuse_address=True,
         )
 
         # Log connection URLs

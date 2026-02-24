@@ -105,6 +105,17 @@ class HudConnection extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateLastAiMessage(String text) {
+    if (_chatMessages.isNotEmpty && _chatMessages.last.sender == 'ai') {
+      _chatMessages[_chatMessages.length - 1] = ChatMessage(
+        sender: 'ai',
+        text: text,
+        timestamp: _chatMessages.last.timestamp,
+      );
+      notifyListeners();
+    }
+  }
+
   void clearChatMessages() {
     _chatMessages.clear();
     notifyListeners();
