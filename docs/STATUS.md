@@ -1,6 +1,6 @@
 # ScouterHUD — Estado del Proyecto
 
-**Última actualización:** 2026-02-22
+**Última actualización:** 2026-02-24
 
 ---
 
@@ -27,11 +27,12 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 | ~~BLE client (Pi ↔ input)~~ | ~~`input/gauntlet_input.py` con bleak~~ | ~~Recibir eventos de App/Gauntlet~~ | **Stub listo** (necesita HW) |
 | ~~PIN/TOTP auth flow~~ | ~~`software/scouterhud/auth/`~~ | ~~QR-Link auth Nivel 1-2~~ | **Completado** |
 | ~~Multi-device switching~~ | ~~Ampliar `ConnectionManager`~~ | ~~Swipe entre dispositivos~~ | **Completado** |
-| ~~Unit tests~~ | ~~`software/tests/`~~ | ~~Validación automática~~ | **116 tests passing** |
+| ~~Unit tests~~ | ~~`software/tests/`~~ | ~~Validación automática~~ | **211 tests passing** |
 | ~~ScouterApp (PoC)~~ | ~~`app/web/` WebSocket + HTML~~ | ~~Input principal del ecosistema~~ | **Completado** |
-| ScouterApp (Flutter) | `app/flutter/` | App nativa Android/iOS | Después del PoC |
+| ~~ScouterApp (Flutter)~~ | ~~`app/flutter/`~~ | ~~App nativa Android/iOS~~ | **v0.4.0 — Completado** |
 | Tactile overlay | `app/overlay/` STL + molde silicona | Operación a ciegas / con guantes | Después de la app |
-| **AI Chat local (LLM on-device)** | `app/flutter/` LlmService | Asistente AI sin cloud (PII/compliance) | **Bloqueado — tooling inmaduro** |
+| ~~AI Chat local (LLM on-device)~~ | ~~`app/flutter/` LlmService~~ | ~~Asistente AI sin cloud (PII/compliance)~~ | **Completado — flutter_gemma + Gemma 3 1B** |
+| AI Context awareness | `app/flutter/` LlmService | AI con acceso a datos del HUD en tiempo real | Pendiente |
 | Voice/AI pipeline | `software/scouterhud/input/voice.py` | Asistente por voz, STT/TTS | Baja (post-MVP) |
 | Gauntlet firmware | `gauntlet/firmware/` (ESP32, PlatformIO) | Accesorio opcional (guantes gruesos, IP67) | Baja (opcional) |
 | Bridge firmware | `bridge/firmware/` (ESP32, PlatformIO) | Hardware del Bridge | Cuando llegue el ESP32 |
@@ -252,7 +253,7 @@ Software principal del ScouterHUD con display emulado en desktop.
 ### Unit Tests
 **Estado:** Completado
 
-179 tests Python + 24 tests Flutter (203 total) cubriendo todos los módulos core. Python tests corren en <0.3s sin hardware ni broker.
+179 tests Python + 32 tests Flutter (211 total) cubriendo todos los módulos core. Python tests corren en <0.3s sin hardware ni broker.
 
 ```bash
 cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
@@ -267,7 +268,8 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 | `tests/test_connection.py` | 11 | Device history, switching, dedup, mock MQTT transport |
 | `tests/test_gauntlet.py` | 21 | Pad→event translation (nav + numeric), BLE notification parser, battery |
 | `tests/test_phone_input.py` | 55 | PhoneInput: message parsing, event map, queue, state broadcast, biometric, device_list, input validation |
-| `app/flutter/.../test/` | 24 | Flutter: HUD state, panel state, chat messages, device list, DeviceInfo, unmodifiable list |
+| `app/flutter/.../test/hud_state_test.dart` | 27 | Flutter: HUD state, panel state, chat messages, device list, DeviceInfo, updateLastAiMessage |
+| `app/flutter/.../test/llm_service_test.dart` | 5 | Flutter: LlmService initial state, generate when not ready |
 
 ### BLE Gauntlet Input Stub
 **Estado:** Completado (stub — necesita hardware ESP32 para test real)
@@ -378,19 +380,17 @@ code /tmp/scouterhud_live.png
 - [x] **Tema visual**: fondo navy #1A1A2E, colores por función (red=cancel, blue=home, yellow=numpad, green=confirm, orange=url, purple=AI, cyan=keyboard)
 - [x] D-pad ◀▶ → prev/next device en streaming (Python backend, sin botones duplicados)
 - [x] Protocolo WebSocket extendido: alpha_key (con value), alpha_backspace/enter/shift, ai_chat, ai_response, biometric_auth
-- [x] 24 tests Flutter + 167 tests Python passing (191 total)
+- [x] 32 tests Flutter + 179 tests Python passing (211 total)
 - [x] **Autenticación biométrica** (FaceID/huella vía `local_auth`) — bypass PIN cuando biometric OK
-- [ ] **AI Chat con LLM local** — UI lista, backend bloqueado (ver nota abajo)
+- [x] **AI Chat con LLM local** — Gemma 3 1B on-device via flutter_gemma. Streaming, GPU, sin cloud
 - [x] **Pantalla device list** — lista de dispositivos con BACK, CONNECT, filas tocables; auto-switch desde HUD
+- [ ] **AI Context awareness** — inyectar datos del HUD (sensores, alarmas) en el contexto del LLM
 - [ ] Comunicación BLE con el HUD (actualmente usa WebSocket vía WiFi)
 - [ ] Pairing flow (escanear QR del HUD)
 
-> **Nota AI/LLM (Feb 2026):** Se intentó inferencia local en el phone con dos packages:
-> 1. `llama_cpp_dart` — no funcionó (primera sesión)
-> 2. `flutter_llama` v1.1.2 — crashes nativos en llama.cpp (segfault en C++, sin fix posible desde Dart)
->
-> **Requisito firme:** el LLM debe correr en el phone (no cloud, no LAN). Datos de salud son PII/PHI — enviarlos a APIs externas viola compliance (HIPAA, etc.).
-> El UI de chat ya existe y funciona (stub echo). Reintentar cuando el tooling Flutter+llama.cpp madure.
+> **AI/LLM (Feb 2026):** Inferencia local funcional con `flutter_gemma` v0.11.16 + Gemma 3 1B IT int4 (529 MB, descarga una vez desde GitHub Releases).
+> Intentos anteriores fallidos: `llama_cpp_dart` (no funcionó), `flutter_llama` v1.1.2 (segfaults nativos en llama.cpp C++).
+> **Requisito firme:** el LLM corre en el phone (no cloud, no LAN). Datos de salud son PII/PHI — compliance HIPAA/GDPR.
 
 **APK releases:**
 
@@ -400,6 +400,7 @@ code /tmp/scouterhud_live.png
 | v0.2.0 | 2026-02-17 | UI/UX: D-pad grande, numpad directo, márgenes, layout reorganizado | 67.9MB |
 | v0.3.0 | 2026-02-20 | Panel system: QWERTY keyboard, AI Chat, fingerprint button, swipe gestures, dark navy theme | 68.5MB |
 | v0.4.0 | 2026-02-20 | Auth biométrica (local_auth), device list screen con BACK/CONNECT/tap, 191 tests | 66MB |
+| v0.4.0-gemma | 2026-02-24 | On-device AI (flutter_gemma + Gemma 3 1B), fallback model download, streaming chat, 211 tests | 220.7MB |
 
 **Archivos Flutter:**
 
@@ -409,7 +410,7 @@ code /tmp/scouterhud_live.png
 | `lib/screens/control_screen.dart` | Panel router: BASE/NUMPAD/ALPHA/AI_CHAT + swipe gestures + edge hints | Listo |
 | `lib/screens/numpad_screen.dart` | Full-screen numpad con PIN banner (auto-open en PIN mode) | Listo |
 | `lib/screens/alpha_keyboard_screen.dart` | Full-screen QWERTY keyboard con safe zones | Listo |
-| `lib/screens/ai_chat_screen.dart` | Full-screen AI chat: mensajes, input, header con CLOSE | Listo |
+| `lib/screens/ai_chat_screen.dart` | Full-screen AI chat: local Gemma 3 1B inference, streaming tokens, download progress, model status indicator | Listo |
 | `lib/screens/qr_scanner_screen.dart` | QR scanner con mobile_scanner + error handling | Listo |
 | `lib/widgets/dpad_widget.dart` | D-pad 5 botones (80x68px) para navegación | Listo |
 | `lib/widgets/numpad_widget.dart` | Teclado numérico 4x3 para PIN entry | Listo |
@@ -422,7 +423,8 @@ code /tmp/scouterhud_live.png
 | `lib/widgets/gesture_guide_bar.dart` | Barra inferior: "◁ NUMPAD" / "ALPHA ▷" | Listo |
 | `lib/widgets/status_bar_widget.dart` | 3 columnas: conexión, titulo+device, modo activo | Listo |
 | `lib/services/websocket_service.dart` | WebSocket client + sendAlphaKey + sendAiChat + sendBiometricAuth + device_list handler | Listo |
-| `lib/models/hud_state.dart` | HudConnection: state, numericMode, activePanel, chatMessages, deviceList, DeviceInfo | Listo |
+| `lib/services/llm_service.dart` | LlmService: flutter_gemma wrapper, model download (GitHub→HF fallback), streaming inference | Listo |
+| `lib/models/hud_state.dart` | HudConnection: state, numericMode, activePanel, chatMessages, deviceList, DeviceInfo, updateLastAiMessage | Listo |
 | `lib/models/panel_state.dart` | Enum: base, numpad, alpha, aiChat, deviceList | Listo |
 | `lib/theme/scouter_colors.dart` | Constantes de color: background, surface, red..cyan, text, border | Listo |
 
@@ -443,17 +445,17 @@ cd ~/scouterHUD/app/flutter/scouter_app && ~/flutter/bin/flutter test
 | Setting | Valor | Razón |
 |---------|-------|-------|
 | Kotlin | 2.1.0 | mobile_scanner 6.0.11 |
-| AGP | 8.7.0 | camera-core 1.5.0 |
-| Gradle | 8.9 | AGP 8.7.0 |
+| AGP | 8.9.1 | flutter_gemma (androidx.core:core-ktx 1.17.0) |
+| Gradle | 8.11.1 | AGP 8.9.1 |
 | compileSdk | 36 | mobile_scanner |
 | NDK | 27.0.12077973 | mobile_scanner + shared_preferences |
-| minSdk | 23 | camera-core 1.5.0 |
+| minSdk | 24 | flutter_gemma (MediaPipe GenAI) |
 | Java | 17 | Kotlin 2.1.0 |
 | usesCleartextTraffic | true | ws:// (no TLS) en Android 9+ |
 
-**Nota WSL2:** Para que el celular alcance el HUD en WSL2, se necesita port forwarding desde Windows:
+**Nota WSL2:** Si usas `networkingMode=mirrored` en `.wslconfig` (WSL2 moderno), los puertos de WSL se ven directamente desde la red — **no necesitas port proxy**. Si usas el modo NAT antiguo, necesitas port forwarding:
 ```powershell
-# PowerShell como Admin
+# PowerShell como Admin (solo para NAT mode, NO necesario con mirrored)
 netsh interface portproxy add v4tov4 listenport=8765 listenaddress=0.0.0.0 connectport=8765 connectaddress=127.0.0.1
 New-NetFirewallRule -DisplayName "ScouterHUD WS" -Direction Inbound -LocalPort 8765 -Protocol TCP -Action Allow
 ```
