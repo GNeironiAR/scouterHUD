@@ -141,6 +141,16 @@ cd software && PYTHONPATH=. ../.venv/bin/python -m scouterhud.main --preview --p
 
 Then open `/tmp/scouterhud_live.png` in any image viewer to see the HUD output live.
 
+### Run on Raspberry Pi (hardware HUD)
+
+```bash
+ssh pi@<pi-ip>
+
+cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python run_hud.py --spi --phone
+```
+
+Then connect ScouterApp to `ws://<pi-ip>:8765`, scan a device QR, and live data appears on the ST7789 display.
+
 ### Available demo devices
 
 | Device | --demo | --topic | Type |
