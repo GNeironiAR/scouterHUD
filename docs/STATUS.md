@@ -49,9 +49,14 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 - [x] GPIO headers pre-soldados (kit iUniker)
 - [x] `backend_spi.py` implementado (ST7789 via SPI, `--spi` flag)
 - [x] 9 tests unitarios con mocks (sin hardware)
-- [ ] Flash MicroSD con Raspberry Pi OS Lite (64-bit)
-- [ ] Habilitar SPI, conectar display ST7789
-- [ ] Correr ScouterHUD en Pi Zero con `--spi --phone`
+- [x] Flash MicroSD con Raspberry Pi OS Lite (64-bit, Bookworm)
+- [x] Pi Zero 2W en red WiFi, SSH funcional (IP 192.168.1.242)
+- [x] SPI habilitado, st7789 + deps instalados en Pi
+- [x] Software ScouterHUD corriendo en Pi: WebSocket + MQTT conectan OK
+- [x] Headers soldados en display ST7789
+- [ ] **Cableado display** — cables VGA no hacen contacto, esperando dupont hembra-hembra
+- [ ] Verificar display muestra datos en hardware real
+- [ ] Investigar hang de `--spi --phone` por argparse en Pi (workaround: python -c directo)
 - [ ] Experimentar con beam splitter (pendiente compra)
 - [ ] Probar lentes asféricas
 - [ ] Validar legibilidad see-through
