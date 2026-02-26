@@ -16,6 +16,11 @@ dependencies = [
 dev = [
     "pytest>=8.0",
 ]
+pi = [
+    "st7789>=0.0.4",
+    "RPi.GPIO>=0.7",
+    "spidev>=3.5",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

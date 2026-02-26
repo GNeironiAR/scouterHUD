@@ -1,6 +1,6 @@
 # ScouterHUD — Estado del Proyecto
 
-**Última actualización:** 2026-02-24
+**Última actualización:** 2026-02-26
 
 ---
 
@@ -27,7 +27,7 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 | ~~BLE client (Pi ↔ input)~~ | ~~`input/gauntlet_input.py` con bleak~~ | ~~Recibir eventos de App/Gauntlet~~ | **Stub listo** (necesita HW) |
 | ~~PIN/TOTP auth flow~~ | ~~`software/scouterhud/auth/`~~ | ~~QR-Link auth Nivel 1-2~~ | **Completado** |
 | ~~Multi-device switching~~ | ~~Ampliar `ConnectionManager`~~ | ~~Swipe entre dispositivos~~ | **Completado** |
-| ~~Unit tests~~ | ~~`software/tests/`~~ | ~~Validación automática~~ | **221 tests passing** |
+| ~~Unit tests~~ | ~~`software/tests/`~~ | ~~Validación automática~~ | **230 tests passing** |
 | ~~ScouterApp (PoC)~~ | ~~`app/web/` WebSocket + HTML~~ | ~~Input principal del ecosistema~~ | **Completado** |
 | ~~ScouterApp (Flutter)~~ | ~~`app/flutter/`~~ | ~~App nativa Android/iOS~~ | **v0.4.0 — Completado** |
 | Tactile overlay | `app/overlay/` STL + molde silicona | Operación a ciegas / con guantes | Después de la app |
@@ -36,19 +36,23 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 | Voice/AI pipeline | `software/scouterhud/input/voice.py` | Asistente por voz, STT/TTS | Baja (post-MVP) |
 | Gauntlet firmware | `gauntlet/firmware/` (ESP32, PlatformIO) | Accesorio opcional (guantes gruesos, IP67) | Baja (opcional) |
 | Bridge firmware | `bridge/firmware/` (ESP32, PlatformIO) | Hardware del Bridge | Cuando llegue el ESP32 |
-| SPI display backend | `display/backend_spi.py` (ST7789) | HUD real en Pi Zero 2W | Cuando llegue el hardware |
+| ~~SPI display backend~~ | ~~`display/backend_spi.py` (ST7789)~~ | ~~HUD real en Pi Zero 2W~~ | **Completado — hardware llegó** |
 | PiCamera backend | `camera/backend_pi.py` | QR scan en HUD (opcional, ver [camera-tech-doc](camera-tech-doc.md)) | Baja (opcional — privacidad) |
 | ~~QR scan desde App~~ | ~~`app/` + `PhoneInput`~~ | ~~QR scanning principal (cámara del celular)~~ | **Completado (Phase A0)** |
 | **Auth biométrica** | `app/` | FaceID/huella reemplaza PIN/TOTP manual | **Incluido en Phase A1** |
 
 ---
 
-## Phase 0 — Proof of Concept: Óptica
-**Estado:** Pendiente (esperando hardware)
+## Phase 0 — Proof of Concept: Hardware
+**Estado:** En progreso (hardware recibido 2026-02-26)
 
-- [ ] Soldar headers al Pi Zero 2W
-- [ ] Conectar display ST7789 por SPI
-- [ ] Experimentar con beam splitter (comprar 2-3 opciones)
+- [x] GPIO headers pre-soldados (kit iUniker)
+- [x] `backend_spi.py` implementado (ST7789 via SPI, `--spi` flag)
+- [x] 9 tests unitarios con mocks (sin hardware)
+- [ ] Flash MicroSD con Raspberry Pi OS Lite (64-bit)
+- [ ] Habilitar SPI, conectar display ST7789
+- [ ] Correr ScouterHUD en Pi Zero con `--spi --phone`
+- [ ] Experimentar con beam splitter (pendiente compra)
 - [ ] Probar lentes asféricas
 - [ ] Validar legibilidad see-through
 
@@ -147,6 +151,7 @@ Software principal del ScouterHUD con display emulado en desktop.
 | `software/scouterhud/display/backend.py` | ABC DisplayBackend (240x240) | Listo |
 | `software/scouterhud/display/backend_desktop.py` | DesktopBackend: pygame 240x240 escalado 3x | Listo |
 | `software/scouterhud/display/backend_preview.py` | PreviewBackend: guarda PNG en /tmp para WSL2 | Listo |
+| `software/scouterhud/display/backend_spi.py` | SPIBackend: ST7789 240x240 via SPI en Raspberry Pi (`--spi`) | Listo |
 | `software/scouterhud/display/widgets.py` | Widgets: draw_big_value, draw_small_value, draw_header, draw_status_bar, value_color | Listo |
 | `software/scouterhud/display/renderer.py` | Layout engine: 6 layouts + device list + pantallas de estado | Listo |
 | `software/scouterhud/camera/backend.py` | ABC CameraBackend | Listo |
@@ -253,7 +258,7 @@ Software principal del ScouterHUD con display emulado en desktop.
 ### Unit Tests
 **Estado:** Completado
 
-181 tests Python + 40 tests Flutter (221 total) cubriendo todos los módulos core. Python tests corren en <0.3s sin hardware ni broker.
+190 tests Python + 40 tests Flutter (230 total) cubriendo todos los módulos core. Python tests corren en <0.3s sin hardware ni broker.
 
 ```bash
 cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
@@ -268,6 +273,7 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 | `tests/test_connection.py` | 11 | Device history, switching, dedup, mock MQTT transport |
 | `tests/test_gauntlet.py` | 21 | Pad→event translation (nav + numeric), BLE notification parser, battery |
 | `tests/test_phone_input.py` | 57 | PhoneInput: message parsing, event map, queue, state broadcast, biometric, device_list, input validation, sensor data |
+| `tests/test_spi_backend.py` | 9 | SPIBackend: init default/custom pins, show/resize/convert, clear, close, brightness, properties |
 | `app/flutter/.../test/hud_state_test.dart` | 33 | Flutter: HUD state, panel state, chat messages, device list, DeviceInfo, updateLastAiMessage, sensor context |
 | `app/flutter/.../test/llm_service_test.dart` | 7 | Flutter: LlmService initial state, generate when not ready, sensor context param |
 
@@ -380,7 +386,7 @@ code /tmp/scouterhud_live.png
 - [x] **Tema visual**: fondo navy #1A1A2E, colores por función (red=cancel, blue=home, yellow=numpad, green=confirm, orange=url, purple=AI, cyan=keyboard)
 - [x] D-pad ◀▶ → prev/next device en streaming (Python backend, sin botones duplicados)
 - [x] Protocolo WebSocket extendido: alpha_key (con value), alpha_backspace/enter/shift, ai_chat, ai_response, biometric_auth
-- [x] 40 tests Flutter + 181 tests Python passing (221 total)
+- [x] 40 tests Flutter + 190 tests Python passing (230 total)
 - [x] **Autenticación biométrica** (FaceID/huella vía `local_auth`) — bypass PIN cuando biometric OK
 - [x] **AI Chat con LLM local** — Gemma 3 1B on-device via flutter_gemma. Streaming, GPU, sin cloud
 - [x] **Pantalla device list** — lista de dispositivos con BACK, CONNECT, filas tocables; auto-switch desde HUD
@@ -477,7 +483,7 @@ Hardening de seguridad sin cambios de arquitectura. Ver [security-model.md](secu
 - [x] **Validación de AI chat** — mensajes >1024 chars truncados
 - [x] **Fail-closed para auth desconocido** — `?auth=foobar` rechaza la URL (antes defaulteaba a open)
 - [x] **Security headers HTTP** — X-Frame-Options, CSP, X-Content-Type-Options, Referrer-Policy
-- [x] 12 tests nuevos de seguridad (181 Python total)
+- [x] 12 tests nuevos de seguridad (190 Python total)
 
 | Archivo | Cambio |
 |---------|--------|
