@@ -80,7 +80,7 @@ The full software stack is functional and tested end-to-end — HUD + App + Emul
 - **Security (Phase S0)** — PIN rate limiting (5 attempts → 15 min lockout), input validation, fail-closed auth, security headers, no hardcoded secrets
 - **Multi-device** — Device history with switching (next/prev/list), device list screen in app, QR scanning between devices
 - **State Machine** — SCANNING > AUTH > CONNECTING > STREAMING > DEVICE_LIST > ERROR
-- **181 Python + 40 Flutter Tests** (221 total) — Full coverage of protocol, auth, renderer, input, connection, phone, gauntlet, security, LLM service, sensor context
+- **190 Python + 40 Flutter Tests** (230 total) — Full coverage of protocol, auth, renderer, input, connection, phone, gauntlet, security, LLM service, sensor context, SPI display
 
 Next: hardware prototyping, security hardening (TLS, phone pairing, challenge-response). See [Security Model](docs/security-model.md).
 

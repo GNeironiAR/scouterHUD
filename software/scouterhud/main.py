@@ -16,6 +16,7 @@ Modes:
 
 Display:
   --preview            Use PNG file backend (for WSL2 / headless)
+  --spi                Use SPI display backend (ST7789 on Raspberry Pi)
   (default)            Use pygame window
 
 Usage:
@@ -71,16 +72,29 @@ class AppState(Enum):
 class ScouterHUD:
     """Main application controller with state machine."""
 
-    def __init__(self, use_preview: bool = False, phone_port: int | None = None):
+    def __init__(
+        self,
+        use_preview: bool = False,
+        use_spi: bool = False,
+        spi_speed: int = 40_000_000,
+        rotation: int = 0,
+        phone_port: int | None = None,
+    ):
         # Display
-        if use_preview:
-            self.display: DisplayBackend = PreviewBackend()
+        if use_spi:
+            from scouterhud.display.backend_spi import SPIBackend
+
+            self.display: DisplayBackend = SPIBackend(
+                spi_speed_hz=spi_speed, rotation=rotation,
+            )
+        elif use_preview:
+            self.display = PreviewBackend()
         else:
             self.display = DesktopBackend(scale=3, title="ScouterHUD")
 
         # Input
         self.input = InputManager()
-        if use_preview:
+        if use_spi or use_preview:
             self.input.add_backend(StdinKeyboardInput())
         else:
             self.input.add_backend(KeyboardInput())
@@ -544,18 +558,42 @@ Controls (preview: w/a/s/d, enter, x, q | pygame: arrows, enter, escape):
         help="Use file-based preview backend (saves PNG to /tmp/scouterhud_live.png)",
     )
     parser.add_argument(
+        "--spi", action="store_true",
+        help="Use SPI display backend (ST7789 on Raspberry Pi)",
+    )
+    parser.add_argument(
+        "--spi-speed", type=int, default=40_000_000,
+        help="SPI bus speed in Hz (default: 40000000)",
+    )
+    parser.add_argument(
+        "--rotation", type=int, default=0, choices=[0, 1, 2, 3],
+        help="Display rotation: 0, 1 (90°), 2 (180°), 3 (270°)",
+    )
+    parser.add_argument(
         "--phone", nargs="?", const=8765, type=int, metavar="PORT",
         help="Enable phone WebSocket control (default port: 8765)",
     )
 
     args = parser.parse_args()
 
+    if args.preview and args.spi:
+        parser.error("--preview and --spi are mutually exclusive")
+
     if not args.scan and not args.demo and args.phone is None:
         parser.error("At least one of --scan, --demo, or --phone is required")
 
-    hud = ScouterHUD(use_preview=args.preview, phone_port=args.phone)
+    hud = ScouterHUD(
+        use_preview=args.preview,
+        use_spi=args.spi,
+        spi_speed=args.spi_speed,
+        rotation=args.rotation,
+        phone_port=args.phone,
+    )
 
-    if args.preview:
+    if args.spi:
+        log.info("SPI display mode (ST7789 240x240)")
+        log.info("Controls: w/a/s/d=navigate, enter=confirm, x=cancel, h=devices, n/p=switch, q=quit")
+    elif args.preview:
         log.info(f"Preview mode: open {hud.display.output_path} in VSCode")
         log.info("Controls: w/a/s/d=navigate, enter=confirm, x=cancel, h=devices, n/p=switch, q=quit")
 
