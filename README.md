@@ -34,7 +34,7 @@ with your phone  ────────► to the HUD, which ─────�
 (ScouterApp)              connects via MQTT         of vision
 ```
 
-**Why no camera on the HUD?** Privacy. A wearable camera causes social rejection ("Glassholes" effect), legal issues (HIPAA, GDPR), and access bans in hospitals, courtrooms, and datacenters. Your phone camera is intentional and controlled — you actively point and scan. The HUD stays a pure display device that can go anywhere.
+**Why no camera on the HUD?** Privacy. A wearable camera causes social rejection ("Glassholes" effect), legal issues (HIPAA, GDPR), and access bans in hospitals, courtrooms, and datacenters. Your phone camera is intentional and controlled — you actively point and scan. The HUD stays a pure display device that can go anywhere. See [Why This Stack](docs/why-this-stack.md) for the full technical reasoning.
 
 ## The ecosystem
 
