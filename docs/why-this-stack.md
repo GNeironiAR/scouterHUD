@@ -225,12 +225,13 @@ qrlink://v1/{id}/mqtt/{host}:{port}?auth={auth}&t={topic}
 **Why on-device:**
 - Health data (vitals, patient info) is PII/PHI. Sending it to a cloud API violates HIPAA, GDPR, and basic trust.
 - A LAN server (local PC running inference) isn't portable. A mechanic, a driver, a nurse walking the ward — none of them have a local server nearby.
-- The phone has 6-12GB RAM and a capable NPU/GPU. The hardware can run a 3B parameter model. The software tooling isn't there yet.
+- The phone has 6-12GB RAM and a capable NPU/GPU. The hardware can run a 1-3B parameter model.
 
-**Current status: blocked.**
-- `llama_cpp_dart`: didn't work (build/runtime failures).
-- `flutter_llama` v1.1.2: native segfaults in the llama.cpp C++ bridge (no event sink, batch overflow, dangling sampler pointer). Unfixable from Dart.
-- The UI is ready (chat screen, WebSocket protocol, message model). Waiting for the Flutter + llama.cpp ecosystem to mature.
+**Current status: working.**
+- `flutter_gemma` v0.11.16 + Gemma 3 1B IT int4 (~529 MB .task file). Runs on-device, GPU-accelerated, streaming responses.
+- **Context-aware**: live sensor data from the connected device is injected into the LLM context. The AI can answer questions about what the user is seeing ("what's the heart rate?", "is the coolant temp normal?").
+- Model hosted on GitHub Releases (~529 MB one-time download, no network needed after that).
+- Previous failed attempts: `llama_cpp_dart` (build failures), `flutter_llama` v1.1.2 (native segfaults in llama.cpp C++ bridge).
 
 **Why not a cloud API as a fallback:**
 - It's not about preference — it's about compliance. One leaked vitals packet = legal liability.
@@ -253,11 +254,11 @@ qrlink://v1/{id}/mqtt/{host}:{port}?auth={auth}&t={topic}
 | Data transport | MQTT (Mosquitto) | IoT standard, pub/sub, retained messages |
 | Pairing protocol | QR-Link (custom URL scheme) | Zero-config, offline, self-contained |
 | Phone app | Flutter (Dart) | One codebase, custom widgets, native APIs |
-| HUD software | Python (pygame, asyncio) | Fast prototyping, Pi-native, 167 tests in 0.3s |
+| HUD software | Python (pygame, asyncio) | Fast prototyping, Pi-native, 190 tests in 0.3s |
 | Phone-HUD comm | WebSocket (staging for BLE) | Bidirectional, testable without hardware |
 | Input | Phone (primary), Gauntlet ESP32 (optional) | Phone has everything; Gauntlet for edge cases |
 | Camera | None on HUD, phone camera for QR | Privacy by design, social acceptance |
-| AI/LLM | On-device (blocked, waiting for tooling) | PII/compliance, no cloud, no LAN |
+| AI/LLM | On-device: flutter_gemma + Gemma 3 1B (working) | PII/compliance, no cloud, no LAN |
 | Licensing | MIT (software) + CERN-OHL-S v2 (hardware) | Open source + open hardware, copyleft for HW |
 
 ---
