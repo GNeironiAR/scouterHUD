@@ -52,13 +52,18 @@ class SPIBackend(DisplayBackend):
         self._rotation = rotation
         self._brightness = 255
 
-        # MADCTL values for ST7789 rotation (MY, MX, MV bits)
-        self._madctl_map = {
-            0: 0x00,  # 0°   — normal
-            1: 0x60,  # 90°  — MV + MX
-            2: 0xC0,  # 180° — MY + MX
-            3: 0xA0,  # 270° — MV + MY
+        # MADCTL values and memory offsets for ST7789 240x240 rotation
+        # ST7789 has 320x240 internal RAM; 240x240 displays need offsets
+        self._rotation_config = {
+            0: (0x00, 0, 0),    # 0°   — normal
+            1: (0x60, 0, 0),    # 90°  — MV + MX
+            2: (0xC0, 0, 80),   # 180° — MY + MX, Y offset 80 (320-240)
+            3: (0xA0, 80, 0),   # 270° — MV + MY, X offset 80
         }
+        cfg = self._rotation_config.get(rotation, (0x00, 0, 0))
+        self._madctl = cfg[0]
+        self._x_offset = cfg[1]
+        self._y_offset = cfg[2]
 
         self._init_display()
 
@@ -85,7 +90,7 @@ class SPIBackend(DisplayBackend):
         time.sleep(0.12)
 
         self._write_cmd(0x36)  # Memory access control (rotation)
-        self._write_data(self._madctl_map.get(self._rotation, 0x00))
+        self._write_data(self._madctl)
 
         self._write_cmd(0x3A)  # Color mode: 16-bit
         self._write_data(0x05)
@@ -133,8 +138,10 @@ class SPIBackend(DisplayBackend):
         time.sleep(0.05)
 
     def _set_window(self, x0: int, y0: int, x1: int, y1: int) -> None:
-        x1 -= 1
-        y1 -= 1
+        x0 += self._x_offset
+        x1 += self._x_offset - 1
+        y0 += self._y_offset
+        y1 += self._y_offset - 1
         self._write_cmd(0x2A)
         self._write_data(x0 >> 8)
         self._write_data(x0 & 0xFF)
