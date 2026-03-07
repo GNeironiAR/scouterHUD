@@ -3,15 +3,15 @@
 Requires hardware: Raspberry Pi with SPI enabled + ST7789 display.
 Install deps: pip install -e ".[pi]"  (st7789, RPi.GPIO, spidev)
 
-Default wiring (Pi Zero 2W → ST7789 7-pin):
-    GND  → Pin 6  (GND)
+Default wiring (Pi Zero 2W → Seengreat ST7789 8-pin JST):
     VCC  → Pin 1  (3.3V)
-    SCL  → Pin 23 (GPIO 11 — SPI0 SCLK)
-    SDA  → Pin 19 (GPIO 10 — SPI0 MOSI)
-    CS   → Pin 24 (GPIO 8  — SPI0 CE0)
+    GND  → Pin 6  (GND)
+    DIN  → Pin 19 (GPIO 10 — SPI0 MOSI)
+    CLK  → Pin 23 (GPIO 11 — SPI0 SCLK)
+    RST  → Pin 13 (GPIO 27)
     DC   → Pin 22 (GPIO 25)
-    RST  → Pin 18 (GPIO 24)
-    BL   → Pin 12 (GPIO 18 — PWM) or 3.3V direct
+    CS   → Pin 24 (GPIO 8  — SPI0 CE0)
+    BL   → Pin 18 (GPIO 24 — PWM)
 """
 
 from PIL import Image
@@ -25,9 +25,9 @@ class SPIBackend(DisplayBackend):
     def __init__(
         self,
         dc_pin: int = 25,
-        rst_pin: int = 24,
-        backlight_pin: int = 18,
-        spi_speed_hz: int = 40_000_000,
+        rst_pin: int = 27,
+        backlight_pin: int = 24,
+        spi_speed_hz: int = 8_000_000,
         rotation: int = 0,
         spi_port: int = 0,
         spi_cs: int = 0,
