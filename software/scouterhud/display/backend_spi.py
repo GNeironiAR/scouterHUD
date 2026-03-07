@@ -52,6 +52,14 @@ class SPIBackend(DisplayBackend):
         self._rotation = rotation
         self._brightness = 255
 
+        # MADCTL values for ST7789 rotation (MY, MX, MV bits)
+        self._madctl_map = {
+            0: 0x00,  # 0°   — normal
+            1: 0x60,  # 90°  — MV + MX
+            2: 0xC0,  # 180° — MY + MX
+            3: 0xA0,  # 270° — MV + MY
+        }
+
         self._init_display()
 
     def _write_cmd(self, cmd: int) -> None:
@@ -76,8 +84,8 @@ class SPIBackend(DisplayBackend):
         self._write_cmd(0x11)  # Sleep out
         time.sleep(0.12)
 
-        self._write_cmd(0x36)  # Memory access control
-        self._write_data(0x00)
+        self._write_cmd(0x36)  # Memory access control (rotation)
+        self._write_data(self._madctl_map.get(self._rotation, 0x00))
 
         self._write_cmd(0x3A)  # Color mode: 16-bit
         self._write_data(0x05)
@@ -146,8 +154,7 @@ class SPIBackend(DisplayBackend):
         img = image.convert("RGB")
         if img.size != (self._w, self._h):
             img = img.resize((self._w, self._h), Image.NEAREST)
-        if self._rotation:
-            img = img.rotate(self._rotation)
+        # Rotation handled by hardware MADCTL register, no software rotate needed
 
         arr = np.asarray(img)
         pixel = np.zeros((self._h, self._w, 2), dtype=np.uint8)
