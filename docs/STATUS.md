@@ -1,6 +1,6 @@
 # ScouterHUD — Estado del Proyecto
 
-**Última actualización:** 2026-02-26
+**Última actualización:** 2026-03-07
 
 ---
 
@@ -36,7 +36,7 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 | Voice/AI pipeline | `software/scouterhud/input/voice.py` | Asistente por voz, STT/TTS | Baja (post-MVP) |
 | Gauntlet firmware | `gauntlet/firmware/` (ESP32, PlatformIO) | Accesorio opcional (guantes gruesos, IP67) | Baja (opcional) |
 | Bridge firmware | `bridge/firmware/` (ESP32, PlatformIO) | Hardware del Bridge | Cuando llegue el ESP32 |
-| ~~SPI display backend~~ | ~~`display/backend_spi.py` (ST7789)~~ | ~~HUD real en Pi Zero 2W~~ | **Completado — hardware llegó** |
+| ~~SPI display backend~~ | ~~`display/backend_spi.py` (ST7789)~~ | ~~HUD real en Pi Zero 2W~~ | **Completado — display Seengreat funcionando** |
 | PiCamera backend | `camera/backend_pi.py` | QR scan en HUD (opcional, ver [camera-tech-doc](camera-tech-doc.md)) | Baja (opcional — privacidad) |
 | ~~QR scan desde App~~ | ~~`app/` + `PhoneInput`~~ | ~~QR scanning principal (cámara del celular)~~ | **Completado (Phase A0)** |
 | **Auth biométrica** | `app/` | FaceID/huella reemplaza PIN/TOTP manual | **Incluido en Phase A1** |
@@ -44,22 +44,24 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 ---
 
 ## Phase 0 — Proof of Concept: Hardware
-**Estado:** En progreso (hardware recibido 2026-02-26)
+**Estado:** Display funcionando (2026-03-07)
 
 - [x] GPIO headers pre-soldados (kit iUniker)
-- [x] `backend_spi.py` implementado (ST7789 via SPI, `--spi` flag)
+- [x] `backend_spi.py` implementado (spidev + gpiozero, Seengreat driver)
 - [x] 9 tests unitarios con mocks (sin hardware)
-- [x] Flash MicroSD con Raspberry Pi OS Lite (64-bit, Bookworm)
+- [x] Flash MicroSD con Raspberry Pi OS Lite (64-bit, Trixie)
 - [x] Pi Zero 2W en red WiFi, SSH funcional (IP 192.168.1.242)
-- [x] SPI habilitado, st7789 + deps instalados en Pi
+- [x] SPI habilitado, spidev + gpiozero + numpy instalados en Pi
 - [x] Software ScouterHUD corriendo en Pi: WebSocket + MQTT conectan OK
-- [x] Headers soldados en display ST7789
-- [ ] **Cableado display** — cables VGA no hacen contacto, esperando dupont hembra-hembra
-- [ ] Verificar display muestra datos en hardware real
-- [ ] Investigar hang de `--spi --phone` por argparse en Pi (workaround: python -c directo)
+- [x] **Display Seengreat ST7789 1.3" funcionando** — HUD muestra datos en tiempo real
+- [x] **Cableado verificado** con cable JST 8-pin pre-armado (sin soldadura)
+- [x] **End-to-end real**: Emulador → MQTT → Pi → Display + ScouterApp con AI local
+- [ ] Investigar hang de `--spi --phone` por argparse en Pi (workaround: run_hud.py)
 - [ ] Experimentar con beam splitter (pendiente compra)
 - [ ] Probar lentes asféricas
 - [ ] Validar legibilidad see-through
+- [ ] Medir latencia de render en Pi Zero 2W
+- [ ] Optimizar FPS (actualmente ~1-2 FPS por limitacion SPI 8MHz + RGB565 conversion)
 
 ### Hardware necesario (ScouterHUD)
 
@@ -303,17 +305,18 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 
 **Dependencia opcional:** `pip install bleak` (no incluida en deps base, solo necesaria con hardware)
 
-### Pendiente en Phase 1 (software — se puede hacer sin hardware)
+### Pendiente en Phase 1 (software)
 
 - [ ] Test de memoria en Pi Zero 2W
+- [ ] Optimizar render FPS (numpy RGB565 conversion es el bottleneck)
 
 ### Pendiente en Phase 1 (hardware)
 
-- [ ] Primer print 3D del housing óptico
-- [ ] Soldar y testear Pi Zero 2W + ST7789
-- [ ] Implementar `display/backend_spi.py` (ST7789 via SPI, lib: `st7789`)
+- [ ] Primer print 3D del housing optico
+- [x] ~~Soldar y testear Pi Zero 2W + ST7789~~ — **Seengreat display con cable JST, sin soldadura**
+- [x] ~~Implementar `display/backend_spi.py`~~ — **Reescrito con spidev+gpiozero (Seengreat driver)**
 - [ ] Test de latencia display render en Pi Zero
-- [ ] *(Opcional)* Implementar `camera/backend_pi.py` (PiCamera, lib: `picamera2`) — solo si se usa módulo de cámara
+- [ ] *(Opcional)* Implementar `camera/backend_pi.py` (PiCamera, lib: `picamera2`) — solo si se usa modulo de camara
 
 ---
 
