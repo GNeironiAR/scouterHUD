@@ -269,6 +269,10 @@ class ScouterHUD:
         self._set_state(AppState.CONNECTING)
         self.display.show(render_connecting_screen(link.id))
 
+        # Clear stale data BEFORE connecting (avoid race with MQTT background thread)
+        with self._data_lock:
+            self._latest_data = None
+
         success = self.connection.connect(
             link,
             on_data=self._on_data,
@@ -277,8 +281,10 @@ class ScouterHUD:
 
         if success:
             self._set_state(AppState.STREAMING)
-            self._latest_data = None
             log.info(f"Connected! Streaming data from {link.id}")
+            with self._data_lock:
+                if self._latest_data is None:
+                    log.info("Waiting for first data message from broker...")
         else:
             self._show_error(
                 f"Cannot connect to {link.endpoint}. Is the broker running?",
@@ -506,7 +512,10 @@ class ScouterHUD:
 
     def _on_data(self, data: dict[str, Any]) -> None:
         with self._data_lock:
+            was_none = self._latest_data is None
             self._latest_data = data
+        if was_none:
+            log.info("First data received — display should update now")
 
     def _on_meta(self, meta: dict[str, Any]) -> None:
         log.info(f"Device metadata: name={meta.get('name')}, type={meta.get('type')}")
