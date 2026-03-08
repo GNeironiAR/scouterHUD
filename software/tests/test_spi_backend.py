@@ -166,24 +166,24 @@ class TestSPIBackendShow:
     def test_show_sends_pixel_data_via_spi(self, mock_hardware):
         backend = _make_backend(mock_hardware)
         spi = mock_hardware["spi"]
-        spi.writebytes.reset_mock()
+        spi.writebytes2.reset_mock()
 
         img = Image.new("RGB", (240, 240), (255, 0, 0))
         backend.show(img)
 
-        assert spi.writebytes.call_count > 0
+        assert spi.writebytes2.call_count > 0
 
     def test_show_sends_correct_pixel_count(self, mock_hardware):
         backend = _make_backend(mock_hardware)
         spi = mock_hardware["spi"]
-        spi.writebytes.reset_mock()
+        spi.writebytes2.reset_mock()
 
         img = Image.new("RGB", (240, 240), (255, 0, 0))
         backend.show(img)
 
         # 240*240*2 = 115200 bytes (RGB565), sent in 4096-byte chunks
         total_pixel_bytes = 240 * 240 * 2
-        all_writes = spi.writebytes.call_args_list
+        all_writes = spi.writebytes2.call_args_list
         pixel_bytes_sent = sum(
             len(c[0][0]) for c in all_writes if len(c[0][0]) > 100
         )
@@ -192,12 +192,12 @@ class TestSPIBackendShow:
     def test_show_resizes_if_needed(self, mock_hardware):
         backend = _make_backend(mock_hardware)
         spi = mock_hardware["spi"]
-        spi.writebytes.reset_mock()
+        spi.writebytes2.reset_mock()
 
         img = Image.new("RGB", (480, 480), (0, 255, 0))
         backend.show(img)
 
-        all_writes = spi.writebytes.call_args_list
+        all_writes = spi.writebytes2.call_args_list
         pixel_bytes_sent = sum(
             len(c[0][0]) for c in all_writes if len(c[0][0]) > 100
         )
@@ -206,24 +206,24 @@ class TestSPIBackendShow:
     def test_show_converts_rgba_to_rgb(self, mock_hardware):
         backend = _make_backend(mock_hardware)
         spi = mock_hardware["spi"]
-        spi.writebytes.reset_mock()
+        spi.writebytes2.reset_mock()
 
         img = Image.new("RGBA", (240, 240), (0, 0, 255, 128))
         backend.show(img)
 
-        assert spi.writebytes.call_count > 0
+        assert spi.writebytes2.call_count > 0
 
     def test_show_rgb565_red_encoding(self, mock_hardware):
         backend = _make_backend(mock_hardware)
         spi = mock_hardware["spi"]
-        spi.writebytes.reset_mock()
+        spi.writebytes2.reset_mock()
 
         # Pure red (255, 0, 0) -> RGB565: high=0xF8, low=0x00
         img = Image.new("RGB", (240, 240), (255, 0, 0))
         backend.show(img)
 
         pixel_data = []
-        for c in spi.writebytes.call_args_list:
+        for c in spi.writebytes2.call_args_list:
             if len(c[0][0]) > 100:
                 pixel_data.extend(c[0][0])
 
@@ -233,14 +233,14 @@ class TestSPIBackendShow:
     def test_show_rgb565_green_encoding(self, mock_hardware):
         backend = _make_backend(mock_hardware)
         spi = mock_hardware["spi"]
-        spi.writebytes.reset_mock()
+        spi.writebytes2.reset_mock()
 
         # Pure green (0, 255, 0) -> RGB565: high=0x07, low=0xE0
         img = Image.new("RGB", (240, 240), (0, 255, 0))
         backend.show(img)
 
         pixel_data = []
-        for c in spi.writebytes.call_args_list:
+        for c in spi.writebytes2.call_args_list:
             if len(c[0][0]) > 100:
                 pixel_data.extend(c[0][0])
 
@@ -250,14 +250,14 @@ class TestSPIBackendShow:
     def test_show_rgb565_blue_encoding(self, mock_hardware):
         backend = _make_backend(mock_hardware)
         spi = mock_hardware["spi"]
-        spi.writebytes.reset_mock()
+        spi.writebytes2.reset_mock()
 
         # Pure blue (0, 0, 255) -> RGB565: high=0x00, low=0x1F
         img = Image.new("RGB", (240, 240), (0, 0, 255))
         backend.show(img)
 
         pixel_data = []
-        for c in spi.writebytes.call_args_list:
+        for c in spi.writebytes2.call_args_list:
             if len(c[0][0]) > 100:
                 pixel_data.extend(c[0][0])
 
@@ -270,11 +270,11 @@ class TestSPIBackendClear:
     def test_clear_sends_black_pixels(self, mock_hardware):
         backend = _make_backend(mock_hardware)
         spi = mock_hardware["spi"]
-        spi.writebytes.reset_mock()
+        spi.writebytes2.reset_mock()
 
         backend.clear()
 
-        all_writes = spi.writebytes.call_args_list
+        all_writes = spi.writebytes2.call_args_list
         pixel_data = []
         for c in all_writes:
             if len(c[0][0]) > 100:
@@ -290,11 +290,11 @@ class TestSPIBackendClose:
         backend = _make_backend(mock_hardware)
         spi = mock_hardware["spi"]
         bl = mock_hardware["bl"]
-        spi.writebytes.reset_mock()
+        spi.writebytes2.reset_mock()
 
         backend.close()
 
-        assert spi.writebytes.call_count > 0
+        assert spi.writebytes2.call_count > 0
         assert bl.value == 0
         spi.close.assert_called_once()
 

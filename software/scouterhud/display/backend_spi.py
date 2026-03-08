@@ -65,6 +65,9 @@ class SPIBackend(DisplayBackend):
         self._x_offset = cfg[1]
         self._y_offset = cfg[2]
 
+        # Pre-allocate clear buffer (all zeros = black in RGB565)
+        self._clear_buf = b'\x00' * (self._w * self._h * 2)
+
         self._init_display()
 
     def _write_cmd(self, cmd: int) -> None:
@@ -163,22 +166,15 @@ class SPIBackend(DisplayBackend):
             img = img.resize((self._w, self._h), Image.NEAREST)
         # Rotation handled by hardware MADCTL register, no software rotate needed
 
-        arr = np.asarray(img)
-        pixel = np.zeros((self._h, self._w, 2), dtype=np.uint8)
-        pixel[..., [0]] = np.add(
-            np.bitwise_and(arr[..., [0]], 0xF8),
-            np.right_shift(arr[..., [1]], 5),
-        )
-        pixel[..., [1]] = np.add(
-            np.bitwise_and(np.left_shift(arr[..., [1]], 3), 0xE0),
-            np.right_shift(arr[..., [2]], 3),
-        )
-        pixel = pixel.flatten().tolist()
+        arr = np.asarray(img, dtype=np.uint16)
+        r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
+        rgb565 = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)
+        buf = rgb565.astype('>u2').tobytes()
 
         self._set_window(0, 0, self._w, self._h)
         self._dc.on()
-        for i in range(0, len(pixel), 4096):
-            self._spi.writebytes(pixel[i : i + 4096])
+        for i in range(0, len(buf), 4096):
+            self._spi.writebytes2(buf[i : i + 4096])
 
     def set_brightness(self, level: int) -> None:
         """Set backlight brightness (0-255)."""
@@ -189,9 +185,8 @@ class SPIBackend(DisplayBackend):
         """Clear display to black."""
         self._set_window(0, 0, self._w, self._h)
         self._dc.on()
-        buf = [0x00] * (self._w * self._h * 2)
-        for i in range(0, len(buf), 4096):
-            self._spi.writebytes(buf[i : i + 4096])
+        for i in range(0, len(self._clear_buf), 4096):
+            self._spi.writebytes2(self._clear_buf[i : i + 4096])
 
     def close(self) -> None:
         """Clear display and release resources."""
