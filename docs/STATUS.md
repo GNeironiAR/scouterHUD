@@ -40,6 +40,9 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 | PiCamera backend | `camera/backend_pi.py` | QR scan en HUD (opcional, ver [camera-tech-doc](camera-tech-doc.md)) | Baja (opcional — privacidad) |
 | ~~QR scan desde App~~ | ~~`app/` + `PhoneInput`~~ | ~~QR scanning principal (cámara del celular)~~ | **Completado (Phase A0)** |
 | **Auth biométrica** | `app/` | FaceID/huella reemplaza PIN/TOTP manual | **Incluido en Phase A1** |
+| **Broker admin dashboard** | Infraestructura externa | Monitoreo, ACLs, gestión de topics/clientes | Producción (usar Mosquitto/EMQX built-in) |
+| **Bridge provisioning** | `bridge/` portal captive + servicio | Registro de Bridges nuevos, asignación de topics, generación de QR | Producción (Phase B1+) |
+| **Identity service (RBAC)** | Servicio central | Asignar personas a devices, roles (enfermera/médico/técnico), integración LDAP/OAuth | Producción (Phase 5+) |
 
 ---
 
