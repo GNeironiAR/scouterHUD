@@ -1,6 +1,6 @@
 # ScouterHUD — Estado del Proyecto
 
-**Última actualización:** 2026-03-07
+**Última actualización:** 2026-03-08
 
 ---
 
@@ -47,11 +47,11 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 ---
 
 ## Phase 0 — Proof of Concept: Hardware
-**Estado:** Display funcionando (2026-03-07)
+**Estado:** Demo funcional en hardware real (2026-03-08)
 
 - [x] GPIO headers pre-soldados (kit iUniker)
 - [x] `backend_spi.py` implementado (spidev + gpiozero, Seengreat driver)
-- [x] 9 tests unitarios con mocks (sin hardware)
+- [x] 21 tests unitarios con mocks (sin hardware)
 - [x] Flash MicroSD con Raspberry Pi OS Lite (64-bit, Trixie)
 - [x] Pi Zero 2W en red WiFi, SSH funcional (IP 192.168.1.242)
 - [x] SPI habilitado, spidev + gpiozero + numpy instalados en Pi
@@ -59,12 +59,14 @@ Revisión cruzada de `ecosystem-overview.md`, `bridge-tech-doc.md` y `gauntlet-t
 - [x] **Display Seengreat ST7789 1.3" funcionando** — HUD muestra datos en tiempo real
 - [x] **Cableado verificado** con cable JST 8-pin pre-armado (sin soldadura)
 - [x] **End-to-end real**: Emulador → MQTT → Pi → Display + ScouterApp con AI local
-- [ ] Investigar hang de `--spi --phone` por argparse en Pi (workaround: run_hud.py)
-- [ ] Experimentar con beam splitter (pendiente compra)
-- [ ] Probar lentes asféricas
+- [x] **FPS optimizado** — `writebytes2()` + `.tobytes()` elimina bottleneck de `.tolist()` (115K objetos Python por frame)
+- [x] **`demo.sh` launcher** — script para demos rápidos: `./demo.sh --broker IP [--wifi SSID PASS] [--rotation N]`
+- [x] **Race condition fix** — `_latest_data` se limpia antes de `connect()`, no después
+- [x] **Beam splitter comprado** — Azure Spy 50:50 (en camino)
+- [ ] Investigar hang de `--spi --phone` por argparse en Pi (workaround: `run_hud.py` / `demo.sh`)
+- [ ] Probar beam splitter + lentes asféricas (óptica see-through)
 - [ ] Validar legibilidad see-through
 - [ ] Medir latencia de render en Pi Zero 2W
-- [ ] Optimizar FPS (actualmente ~1-2 FPS por limitacion SPI 8MHz + RGB565 conversion)
 
 ### Hardware necesario (ScouterHUD)
 
@@ -283,7 +285,7 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 | `tests/test_connection.py` | 11 | Device history, switching, dedup, mock MQTT transport |
 | `tests/test_gauntlet.py` | 21 | Pad→event translation (nav + numeric), BLE notification parser, battery |
 | `tests/test_phone_input.py` | 57 | PhoneInput: message parsing, event map, queue, state broadcast, biometric, device_list, input validation, sensor data |
-| `tests/test_spi_backend.py` | 9 | SPIBackend: init default/custom pins, show/resize/convert, clear, close, brightness, properties |
+| `tests/test_spi_backend.py` | 21 | SPIBackend: init pins/SPI/backlight, init sequence (sleep out, display on, MADCTL, color mode, inversion), 4 rotations + invalid, show pixel data/count/resize/RGBA, RGB565 encoding (R/G/B), clear black, close backlight+SPI, brightness PWM clamp, width/height |
 | `app/flutter/.../test/hud_state_test.dart` | 33 | Flutter: HUD state, panel state, chat messages, device list, DeviceInfo, updateLastAiMessage, sensor context |
 | `app/flutter/.../test/llm_service_test.dart` | 7 | Flutter: LlmService initial state, generate when not ready, sensor context param |
 
@@ -311,7 +313,6 @@ cd ~/scouterHUD/software && PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -v
 ### Pendiente en Phase 1 (software)
 
 - [ ] Test de memoria en Pi Zero 2W
-- [ ] Optimizar render FPS (numpy RGB565 conversion es el bottleneck)
 
 ### Pendiente en Phase 1 (hardware)
 
@@ -603,6 +604,27 @@ Esto levanta los 5 dispositivos publicando datos por MQTT. Para un solo disposit
 ```bash
 cd ~/scouterHUD/emulator && ../.venv/bin/python emulator.py --device monitor-bed-12
 ```
+
+### Terminal 3 — ScouterHUD en Pi Zero 2W (hardware real)
+
+```bash
+# SSH al Pi
+ssh pi@192.168.1.242
+
+# Pull última versión
+cd ~/scouterHUD && git pull
+
+# Correr demo (broker = IP de tu PC)
+./demo.sh --broker 192.168.1.87
+
+# Para cambiar de red WiFi en una demo (hackathon, etc):
+./demo.sh --broker 10.0.0.5 --wifi "HackathonWiFi" "password123"
+
+# Con rotación 180° (display invertido):
+./demo.sh --broker 192.168.1.87 --rotation 2
+```
+
+Luego abrir ScouterApp en el celular → escanear QR del dispositivo → el display muestra datos en vivo.
 
 ### Terminal 3 — ScouterHUD (preview en WSL2)
 
