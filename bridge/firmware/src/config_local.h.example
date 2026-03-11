@@ -1,0 +1,8 @@
+// Copiar este archivo a config_local.h y completar con tus credenciales
+// config_local.h está en .gitignore — no se commitea
+
+#pragma once
+
+#define WIFI_SSID    "TuRedWiFi"
+#define WIFI_PASS    "tupassword"
+#define MQTT_BROKER  "192.168.1.X"
