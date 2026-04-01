@@ -66,6 +66,31 @@ The app scans it with the phone camera, sends the URL to the HUD, and it connect
 
 **Security levels:** Open (public data) / Biometric (FaceID/fingerprint) / Biometric + PIN / Mutual TLS / Multi-factor
 
+## Live demo: real car data
+
+<p align="center">
+  <img src="docs/images/mvp-demo.png" width="800" alt="ScouterHUD ecosystem architecture — ScouterBridge reading real OBD-II data from a Honda CR-V 2010"/>
+</p>
+
+End-to-end pipeline running with a real vehicle. A Honda CR-V 2010 with the FNIRSI FD10 OBD-II scanner plugged in:
+
+- **ScouterBridge** (ESP32-S3 on a powerbank) connects to the FD10 via BLE and reads live engine data
+- **ScouterHUD** (Pi Zero 2W + ST7789 display) shows RPM, speed, coolant temp, and battery voltage in real time
+- **ScouterApp** mirrors the data and the on-device AI (Gemma 3 1B) can answer questions about the car
+
+Real data captured at idle:
+
+| Sensor | Value |
+|--------|-------|
+| RPM | ~710 RPM |
+| Speed | 0 km/h |
+| Coolant temp | 83°C |
+| Battery | 13.9V |
+
+The bridge runs completely wireless — no laptop required after flashing. Plug the FD10 into the OBD-II port, power the ESP32 from a powerbank, and the full pipeline starts automatically.
+
+---
+
 ## Current status
 
 The full software stack is functional and tested end-to-end — HUD + App + Emulator:

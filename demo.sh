@@ -15,6 +15,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROTATION=0
+MIRROR=""
 BROKER=""
 WIFI_SSID=""
 WIFI_PASS=""
@@ -35,13 +36,18 @@ while [[ $# -gt 0 ]]; do
             ROTATION="$2"
             shift 2
             ;;
+        --mirror)
+            MIRROR="--mirror"
+            shift
+            ;;
         --help|-h)
-            echo "Uso: ./demo.sh --broker <IP> [--wifi SSID PASSWORD] [--rotation 0-3]"
+            echo "Uso: ./demo.sh --broker <IP> [--wifi SSID PASSWORD] [--rotation 0-3] [--mirror]"
             echo ""
             echo "Opciones:"
             echo "  --broker IP       IP del broker MQTT (requerido)"
             echo "  --wifi SSID PASS  Conectar a otra red WiFi antes de iniciar"
             echo "  --rotation N      Rotacion del display (0=normal, 2=180)"
+            echo "  --mirror          Espejo horizontal (para beam splitter)"
             echo ""
             echo "Ejemplo:"
             echo "  ./demo.sh --broker 192.168.1.87"
@@ -80,7 +86,7 @@ echo "  ScouterHUD Demo"
 echo "====================================="
 echo "  Pi IP:    $PI_IP"
 echo "  Broker:   $BROKER:1883"
-echo "  Rotation: $ROTATION"
+echo "  Rotation: $ROTATION${MIRROR:+ (mirrored)}"
 echo "  App:      ws://$PI_IP:8765"
 echo "====================================="
 echo ""
@@ -90,4 +96,4 @@ echo ""
 
 # --- Levantar HUD ---
 cd "$SCRIPT_DIR/software"
-PYTHONPATH=. ../.venv/bin/python run_hud.py --spi --phone --rotation "$ROTATION"
+PYTHONPATH=. ../.venv/bin/python run_hud.py --spi --phone --rotation "$ROTATION" $MIRROR

@@ -78,6 +78,7 @@ class ScouterHUD:
         use_spi: bool = False,
         spi_speed: int = 40_000_000,
         rotation: int = 0,
+        mirror: bool = False,
         phone_port: int | None = None,
     ):
         # Display
@@ -85,7 +86,7 @@ class ScouterHUD:
             from scouterhud.display.backend_spi import SPIBackend
 
             self.display: DisplayBackend = SPIBackend(
-                spi_speed_hz=spi_speed, rotation=rotation,
+                spi_speed_hz=spi_speed, rotation=rotation, mirror=mirror,
             )
         elif use_preview:
             self.display = PreviewBackend()
@@ -579,6 +580,10 @@ Controls (preview: w/a/s/d, enter, x, q | pygame: arrows, enter, escape):
         help="Display rotation: 0, 1 (90°), 2 (180°), 3 (270°)",
     )
     parser.add_argument(
+        "--mirror", action="store_true",
+        help="Flip display horizontally (for beam splitter optics)",
+    )
+    parser.add_argument(
         "--phone", nargs="?", const=8765, type=int, metavar="PORT",
         help="Enable phone WebSocket control (default port: 8765)",
     )
@@ -596,6 +601,7 @@ Controls (preview: w/a/s/d, enter, x, q | pygame: arrows, enter, escape):
         use_spi=args.spi,
         spi_speed=args.spi_speed,
         rotation=args.rotation,
+        mirror=args.mirror,
         phone_port=args.phone,
     )
 

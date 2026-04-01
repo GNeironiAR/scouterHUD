@@ -34,6 +34,7 @@ class SPIBackend(DisplayBackend):
         backlight_pin: int = 24,
         spi_speed_hz: int = 8_000_000,
         rotation: int = 0,
+        mirror: bool = False,
         spi_port: int = 0,
         spi_cs: int = 0,
     ):
@@ -50,6 +51,7 @@ class SPIBackend(DisplayBackend):
         self._w = DISPLAY_WIDTH
         self._h = DISPLAY_HEIGHT
         self._rotation = rotation
+        self._mirror = mirror
         self._brightness = 255
 
         # MADCTL values and memory offsets for ST7789 240x240 rotation
@@ -164,7 +166,8 @@ class SPIBackend(DisplayBackend):
         img = image.convert("RGB")
         if img.size != (self._w, self._h):
             img = img.resize((self._w, self._h), Image.NEAREST)
-        # Rotation handled by hardware MADCTL register, no software rotate needed
+        if self._mirror:
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)
 
         arr = np.asarray(img, dtype=np.uint16)
         r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
